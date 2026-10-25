@@ -1,0 +1,71 @@
+
+Welcome to Gradle 9.3.1!
+
+Here are the highlights of this release:
+ - Test reporting improvements
+ - Error and warning improvements
+ - Build authoring improvements
+
+For more details see https://docs.gradle.org/9.3.1/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Calculating task graph as no cached configuration is available for tasks: assembleDebug
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugResources
+> Task :app:generateDebugBuildConfig
+> Task :app:packageDebugResources
+> Task :app:javaPreCompileDebug
+> Task :app:desugarDebugFileDependencies
+> Task :app:checkDebugDuplicateClasses
+> Task :app:processDebugNavigationResources
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:parseDebugLocalResources
+> Task :app:mergeLibDexDebug
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugRFile
+> Task :app:compileDebugNavigationResources
+> Task :app:checkDebugAarMetadata
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:mergeExtDexDebug
+> Task :app:processDebugMainManifest
+> Task :app:mergeDebugResources
+> Task :app:processDebugManifest
+> Task :app:mergeDebugJniLibFolders
+> Task :app:processDebugManifestForPackage
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so. Run with --info option to learn more.
+
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/moment/moment/app/src/main/java/com/example/data/BlindRelayRepository.kt:81:33 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/moment/moment/app/src/main/java/com/example/data/BlindRelayRepository.kt:87:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/moment/moment/app/src/main/java/com/example/data/BlindRelayRepository.kt:91:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/moment/moment/app/src/main/java/com/example/data/BlindRelayRepository.kt:97:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/moment/moment/app/src/main/java/com/example/data/BlindRelayRepository.kt:211:22 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///home/runner/work/moment/moment/app/src/main/java/com/example/data/BlindRelayRepository.kt:300:22 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugJavaResource
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugResources
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:packageDebug
+> Task :app:assembleDebug
+> Task :app:createDebugApkListingFileRedirect
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_3-1792920378551.json
+
+BUILD SUCCESSFUL in 2m 2s
+37 actionable tasks: 37 executed
+Configuration cache entry stored.
