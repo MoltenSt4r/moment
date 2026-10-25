@@ -24,7 +24,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.security.SecureRandom
+import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 enum class SessionPhase {
@@ -71,10 +73,10 @@ class MomentViewModel(
     private var activePeerUid: String = ""
 
     private val ratchetCounter = AtomicInteger(0)
-    private val processedEnvelopeIds = mutableSetOf<String>()
-    private val envelopeDocIdByMessageId = mutableMapOf<String, String>()
-    private val disintegratingMessageIds = mutableSetOf<String>()
-    private val deadRoomIds = mutableSetOf<String>()
+    private val processedEnvelopeIds: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
+    private val envelopeDocIdByMessageId = ConcurrentHashMap<String, String>()
+    private val disintegratingMessageIds: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
+    private val deadRoomIds: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
 
     private var matchmakingJob: Job? = null
     private var roomObserverJob: Job? = null

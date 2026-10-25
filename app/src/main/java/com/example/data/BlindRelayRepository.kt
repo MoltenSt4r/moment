@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,8 +51,12 @@ class BlindRelayRepository(context: Context? = null) {
     // Current room state flow (emits when matched or peer leaves)
     private val roomStateFlow = MutableStateFlow<BlindRoomDoc?>(null)
 
-    // Envelopes received from peer
-    private val envelopesStateFlow = MutableStateFlow<List<BlindEnvelopeDoc>>(emptyList())
+    // Buffered stream of incoming envelopes from peer (prevents state conflation)
+    private val envelopeFlow = MutableSharedFlow<BlindEnvelopeDoc>(
+        replay = 16,
+        extraBufferCapacity = 128,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     // Current active room ID and user credentials
     private var currentRoomId: String? = null
@@ -144,7 +149,7 @@ class BlindRelayRepository(context: Context? = null) {
                         ttlSeconds = envJson.optLong("ttlSeconds"),
                         createdAt = RelayTimestamp()
                     )
-                    envelopesStateFlow.value = envelopesStateFlow.value + env
+                    envelopeFlow.tryEmit(env)
                 }
 
                 "peer_left" -> {
@@ -203,7 +208,7 @@ class BlindRelayRepository(context: Context? = null) {
         myPubKey = hostPubKey
         mySalt = ephemeralSalt
         currentRoomId = customRoomId
-        envelopesStateFlow.value = emptyList()
+        envelopeFlow.resetReplayCache()
 
         val initialRoom = BlindRoomDoc(
             id = customRoomId,
@@ -277,11 +282,11 @@ class BlindRelayRepository(context: Context? = null) {
     }
 
     fun observeLiveRoomEnvelopes(roomId: String): Flow<List<BlindEnvelopeDoc>> {
-        return envelopesStateFlow.asStateFlow()
+        return envelopeFlow.map { listOf(it) }
     }
 
     suspend fun deleteLiveEnvelope(roomId: String, envelopeId: String): Result<Unit> {
-        envelopesStateFlow.value = envelopesStateFlow.value.filter { it.id != envelopeId }
+        // Envelopes in WebSocket relay are purely in-memory streaming events; no remote deletion needed
         return Result.success(Unit)
     }
 
@@ -292,7 +297,7 @@ class BlindRelayRepository(context: Context? = null) {
         }
         sendJson(leaveMsg)
 
-        envelopesStateFlow.value = emptyList()
+        envelopeFlow.resetReplayCache()
         roomStateFlow.value = BlindRoomDoc(id = roomId, status = "shredded")
         currentRoomId = null
         return Result.success(Unit)

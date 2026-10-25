@@ -1,6 +1,7 @@
 package com.example.crypto
 
 import android.util.Base64
+import android.util.Log
 import org.json.JSONObject
 import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
@@ -159,7 +160,10 @@ class ZeroKnowledgeSessionCrypto {
     }
 
     fun decryptPayload(packet: SealedCipherPacket): PlainEnvelopePayload? {
-        val root = rootSessionKey ?: return null
+        val root = rootSessionKey ?: run {
+            Log.w(TAG, "Cannot decrypt: rootSessionKey is null")
+            return null
+        }
         val msgKeyBytes = deriveRatchetMessageKey(root, packet.ratchetStep)
         return try {
             val iv = Base64.decode(packet.ivBase64, Base64.NO_WRAP)
@@ -173,7 +177,8 @@ class ZeroKnowledgeSessionCrypto {
             val jsonStr = String(plainBytes, StandardCharsets.UTF_8)
             Arrays.fill(plainBytes, 0.toByte())
             PlainEnvelopePayload.fromJsonString(jsonStr)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Decryption failure at step ${packet.ratchetStep}: ${e.message}", e)
             null
         } finally {
             Arrays.fill(msgKeyBytes, 0.toByte())
@@ -213,6 +218,7 @@ class ZeroKnowledgeSessionCrypto {
     }
 
     companion object {
+        private const val TAG = "ZeroKnowledgeCrypto"
         private const val CURVE_NAME = "secp256r1"
         private const val AES_GCM_TRANSFORMATION = "AES/GCM/NoPadding"
         private const val GCM_IV_LENGTH_BYTES = 12

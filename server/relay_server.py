@@ -55,23 +55,39 @@ async def send_safe(ws, msg_dict: dict):
     except Exception as e:
         logger.debug(f"Failed to send: {e}")
 
-async def handle_leave(ws):
+async def handle_leave(ws, explicit: bool = False):
     global waiting_queue
     waiting_queue = [item for item in waiting_queue if item["ws"] != ws]
 
     room_id = ws_to_room.pop(ws, None)
     if room_id and room_id in active_rooms:
-        room = active_rooms.pop(room_id, None)
+        room = active_rooms.get(room_id)
         if room:
-            host_ws = room["host_ws"]
-            guest_ws = room["guest_ws"]
-            peer_ws = guest_ws if ws == host_ws else host_ws
+            if explicit:
+                active_rooms.pop(room_id, None)
+                host_ws = room["host_ws"]
+                guest_ws = room["guest_ws"]
+                peer_ws = guest_ws if ws == host_ws else host_ws
+                ws_to_room.pop(peer_ws, None)
+                await send_safe(peer_ws, {"type": "peer_left", "roomId": room_id})
+                logger.info(f"Room {room_id} explicitly shredded")
+            else:
+                asyncio.create_task(delayed_room_cleanup(room_id, ws))
 
-            ws_to_room.pop(peer_ws, None)
+async def delayed_room_cleanup(room_id: str, disconnected_ws):
+    await asyncio.sleep(12.0)
+    if room_id in active_rooms:
+        room = active_rooms.get(room_id)
+        if room and (room["host_ws"] == disconnected_ws or room["guest_ws"] == disconnected_ws):
+            logger.info(f"Room {room_id} closed after disconnect timeout")
+            active_rooms.pop(room_id, None)
+            ws_to_room.pop(room["host_ws"], None)
+            ws_to_room.pop(room["guest_ws"], None)
+            peer_ws = room["guest_ws"] if disconnected_ws == room["host_ws"] else room["host_ws"]
             await send_safe(peer_ws, {"type": "peer_left", "roomId": room_id})
 
 async def handle_join_queue(ws, data: dict):
-    await handle_leave(ws)
+    await handle_leave(ws, explicit=True)
 
     node_id = str(data.get("nodeId", ""))[:64]
     pub_key = str(data.get("pubKey", ""))[:512]
@@ -129,30 +145,49 @@ async def handle_join_queue(ws, data: dict):
         await send_safe(ws, {"type": "queue_joined"})
 
 async def handle_envelope(ws, data: dict):
-    room_id = ws_to_room.get(ws) or data.get("roomId")
+    envelope = data.get("envelope")
+    if not isinstance(envelope, dict):
+        return
+
+    room_id = ws_to_room.get(ws) or data.get("roomId") or str(envelope.get("roomId", ""))
     if not room_id or room_id not in active_rooms:
         logger.warning(f"Dropping envelope: room {room_id} not found. Active: {list(active_rooms.keys())}")
         return
 
     room = active_rooms[room_id]
-    if ws != room["host_ws"] and ws != room["guest_ws"]:
-        return
+    sender_uid = str(envelope.get("senderUid", ""))[:64]
 
-    logger.info(f"Forwarding envelope in room {room_id}")
-    target_ws = room["guest_ws"] if ws == room["host_ws"] else room["host_ws"]
-    envelope = data.get("envelope")
-    if not isinstance(envelope, dict):
+    # Dynamically re-bind socket if sender reconnected
+    if sender_uid == room["host_node"]:
+        if room["host_ws"] != ws:
+            logger.info(f"Re-binding host socket for room {room_id}")
+            room["host_ws"] = ws
+            ws_to_room[ws] = room_id
+        target_ws = room["guest_ws"]
+    elif sender_uid == room["guest_node"]:
+        if room["guest_ws"] != ws:
+            logger.info(f"Re-binding guest socket for room {room_id}")
+            room["guest_ws"] = ws
+            ws_to_room[ws] = room_id
+        target_ws = room["host_ws"]
+    elif ws == room["host_ws"]:
+        target_ws = room["guest_ws"]
+    elif ws == room["guest_ws"]:
+        target_ws = room["host_ws"]
+    else:
+        logger.warning(f"Dropping envelope: sender {sender_uid} not matched in room {room_id}")
         return
 
     safe_envelope = {
-        "roomId": str(envelope.get("roomId", ""))[:64],
-        "senderUid": str(envelope.get("senderUid", ""))[:64],
+        "roomId": str(room_id)[:64],
+        "senderUid": sender_uid,
         "ratchetStep": int(envelope.get("ratchetStep", 0)),
         "iv": str(envelope.get("iv", ""))[:128],
         "ciphertext": str(envelope.get("ciphertext", ""))[:32768],
         "ttlSeconds": int(envelope.get("ttlSeconds", 0))
     }
 
+    logger.info(f"Forwarding envelope step={safe_envelope['ratchetStep']} in room {room_id}")
     await send_safe(target_ws, {
         "type": "envelope",
         "roomId": room_id,
@@ -204,21 +239,21 @@ async def handler(websocket):
             if action == "join_queue":
                 await handle_join_queue(websocket, data)
             elif action == "cancel_queue":
-                await handle_leave(websocket)
+                await handle_leave(websocket, explicit=True)
                 await send_safe(websocket, {"type": "queue_cancelled"})
             elif action == "send_envelope":
                 await handle_envelope(websocket, data)
             elif action == "typing":
                 await handle_typing(websocket, data)
             elif action == "leave_room":
-                await handle_leave(websocket)
+                await handle_leave(websocket, explicit=True)
             elif action == "ping":
                 await send_safe(websocket, {"type": "pong"})
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
         ws_rate_limit.pop(websocket, None)
-        await handle_leave(websocket)
+        await handle_leave(websocket, explicit=False)
         remaining = ip_connections.get(ip, 1) - 1
         if remaining <= 0:
             ip_connections.pop(ip, None)
