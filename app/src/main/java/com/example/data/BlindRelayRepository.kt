@@ -114,31 +114,20 @@ class BlindRelayRepository(context: Context? = null) {
 
                     currentRoomId = roomId
 
-                    val roomDoc = if (role == "host") {
-                        BlindRoomDoc(
-                            id = roomId,
-                            hostUid = myNodeId,
-                            guestUid = peerNodeId,
-                            hostPubKey = myPubKey,
-                            guestPubKey = peerPubKey,
-                            ephemeralSalt = salt,
-                            status = "active",
-                            createdAt = RelayTimestamp(),
-                            updatedAt = RelayTimestamp()
-                        )
-                    } else {
-                        BlindRoomDoc(
-                            id = roomId,
-                            hostUid = peerNodeId,
-                            guestUid = myNodeId,
-                            hostPubKey = peerPubKey,
-                            guestPubKey = myPubKey,
-                            ephemeralSalt = salt,
-                            status = "active",
-                            createdAt = RelayTimestamp(),
-                            updatedAt = RelayTimestamp()
-                        )
-                    }
+                    // From this node's perspective, hostUid/hostPubKey is always self,
+                    // and guestUid/guestPubKey is always the remote peer.
+                    // This ensures MomentViewModel always completes handshake with peerPubKey.
+                    val roomDoc = BlindRoomDoc(
+                        id = roomId,
+                        hostUid = myNodeId,
+                        guestUid = peerNodeId,
+                        hostPubKey = myPubKey,
+                        guestPubKey = peerPubKey,
+                        ephemeralSalt = salt,
+                        status = "active",
+                        createdAt = RelayTimestamp(),
+                        updatedAt = RelayTimestamp()
+                    )
                     roomStateFlow.value = roomDoc
                 }
 

@@ -303,15 +303,16 @@ class MomentViewModel(
                                 handshakeVerification = verification
                             )
                         }
+                        val matchedRoomId = roomSnap.id.ifBlank { myRoomId }
                         // Confirm liveness to the Guest with an encrypted 512B-padded HANDSHAKE_ACK
-                        sendControlEnvelope(myRoomId, PayloadKind.HANDSHAKE_ACK)
+                        sendControlEnvelope(matchedRoomId, PayloadKind.HANDSHAKE_ACK)
 
                         enterActiveChat(
-                            roomId = myRoomId,
+                            roomId = matchedRoomId,
                             peerUid = roomSnap.guestUid,
                             verification = verification
                         )
-                        observeActiveRoomLifecycle(myRoomId)
+                        observeActiveRoomLifecycle(matchedRoomId)
                         if (!matchOutcome.isCompleted) matchOutcome.complete(true)
                     }
                 }
