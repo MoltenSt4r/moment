@@ -17,7 +17,7 @@ logger = logging.getLogger("MomentRelay")
 # Security & Anti-DoS Configuration
 MAX_MESSAGE_BYTES = 64 * 1024       # 64 KB per message max
 MAX_WAITING_QUEUE = 2000            # Max users in matchmaking queue
-MAX_CONNECTIONS_PER_IP = 10         # Prevent single IP socket-exhaustion flood
+MAX_CONNECTIONS_PER_IP = 100        # Prevent single IP socket-exhaustion flood
 RATE_LIMIT_MESSAGES_PER_SEC = 25    # Max incoming messages per socket per second
 
 # In-memory State

@@ -45,6 +45,7 @@ class BlindRelayRepository(context: Context? = null) {
 
     private var webSocket: WebSocket? = null
     private val isConnected = AtomicBoolean(false)
+    private val isConnecting = AtomicBoolean(false)
 
     // Current room state flow (emits when matched or peer leaves)
     private val roomStateFlow = MutableStateFlow<BlindRoomDoc?>(null)
@@ -63,14 +64,20 @@ class BlindRelayRepository(context: Context? = null) {
         connectWebSocket()
     }
 
+    @Synchronized
     private fun connectWebSocket() {
-        if (isConnected.get()) return
+        if (isConnected.get() || isConnecting.getAndSet(true)) return
+
+        try {
+            webSocket?.close(1000, "reconnecting")
+        } catch (_: Exception) {}
 
         val request = Request.Builder().url(RELAY_URL).build()
         webSocket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(ws: WebSocket, response: Response) {
                 Log.i(TAG, "WebSocket connected to $RELAY_URL")
                 isConnected.set(true)
+                isConnecting.set(false)
             }
 
             override fun onMessage(ws: WebSocket, text: String) {
@@ -80,11 +87,13 @@ class BlindRelayRepository(context: Context? = null) {
             override fun onClosing(ws: WebSocket, code: Int, reason: String) {
                 ws.close(1000, null)
                 isConnected.set(false)
+                isConnecting.set(false)
             }
 
             override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
                 Log.w(TAG, "WebSocket failure: ${t.message}. Reconnecting in 3s...")
                 isConnected.set(false)
+                isConnecting.set(false)
                 scope.launch {
                     delay(3000)
                     connectWebSocket()
@@ -182,7 +191,11 @@ class BlindRelayRepository(context: Context? = null) {
         } else {
             connectWebSocket()
             scope.launch {
-                delay(500)
+                var retries = 0
+                while (!isConnected.get() && retries < 10) {
+                    delay(300)
+                    retries++
+                }
                 webSocket?.send(payload)
             }
         }
@@ -235,10 +248,6 @@ class BlindRelayRepository(context: Context? = null) {
     }
 
     suspend fun heartbeatLiveWaitingRoom(roomId: String): Result<Unit> {
-        val pingMsg = JSONObject().apply {
-            put("action", "ping")
-        }
-        sendJson(pingMsg)
         return Result.success(Unit)
     }
 
