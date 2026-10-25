@@ -1,30 +1,28 @@
 package com.example.data
 
 import android.util.Log
-import com.google.firebase.Timestamp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.IgnoreExtraProperties
-import com.google.firebase.firestore.ServerTimestamp
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Date
 
-@IgnoreExtraProperties
+data class RelayTimestamp(val time: Long = System.currentTimeMillis()) {
+    fun toDate(): Date = Date(time)
+}
+
 data class BlindRoomDoc(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val hostUid: String = "",
     val guestUid: String = "",
     val hostPubKey: String = "",
     val guestPubKey: String = "",
     val ephemeralSalt: String = "",
     val status: String = "waiting",
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    val createdAt: RelayTimestamp? = RelayTimestamp(),
+    val updatedAt: RelayTimestamp? = RelayTimestamp()
 )
 
-@IgnoreExtraProperties
 data class BlindEnvelopeDoc(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val roomId: String = "",
     val senderUid: String = "",
     val participantUids: List<String> = emptyList(),
@@ -32,7 +30,7 @@ data class BlindEnvelopeDoc(
     val iv: String = "",
     val ciphertext: String = "",
     val ttlSeconds: Long = 0L,
-    @ServerTimestamp val createdAt: Timestamp? = null
+    val createdAt: RelayTimestamp? = RelayTimestamp()
 )
 
 /**
