@@ -51,6 +51,8 @@ import com.example.ui.theme.extractWallpaperSeedColor
 import com.example.util.HapticEngine
 import com.example.viewmodel.MomentViewModel
 import com.example.viewmodel.SessionPhase
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -58,6 +60,7 @@ import java.util.UUID
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initFirebase(this)
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
@@ -99,6 +102,21 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+}
+
+private fun initFirebase(context: Context) {
+    if (FirebaseApp.getApps(context).isEmpty()) {
+        try {
+            FirebaseApp.initializeApp(context)
+        } catch (_: Exception) {
+            val options = FirebaseOptions.Builder()
+                .setApplicationId("com.aistudio.moment.zkchat")
+                .setProjectId("ai-studio-android-moment")
+                .setApiKey("AIzaSyDummyKeyForMockingOfflineUse12345")
+                .build()
+            FirebaseApp.initializeApp(context, options)
         }
     }
 }
