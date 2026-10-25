@@ -25,4 +25,5 @@
     <string name="peer_typing">печатает…</string>
     <string name="crypto_audit_title">Криптографический паспорт сессии</string>
     <string name="sign_out">Выйти из аккаунта</string>
+    <string name="default_web_client_id" translatable="false">dummy_default_web_client_id</string>
 </resources>
