@@ -129,14 +129,16 @@ async def handle_join_queue(ws, data: dict):
         await send_safe(ws, {"type": "queue_joined"})
 
 async def handle_envelope(ws, data: dict):
-    room_id = data.get("roomId") or ws_to_room.get(ws)
+    room_id = ws_to_room.get(ws) or data.get("roomId")
     if not room_id or room_id not in active_rooms:
+        logger.warning(f"Dropping envelope: room {room_id} not found. Active: {list(active_rooms.keys())}")
         return
 
     room = active_rooms[room_id]
     if ws != room["host_ws"] and ws != room["guest_ws"]:
         return
 
+    logger.info(f"Forwarding envelope in room {room_id}")
     target_ws = room["guest_ws"] if ws == room["host_ws"] else room["host_ws"]
     envelope = data.get("envelope")
     if not isinstance(envelope, dict):
@@ -158,7 +160,7 @@ async def handle_envelope(ws, data: dict):
     })
 
 async def handle_typing(ws, data: dict):
-    room_id = data.get("roomId") or ws_to_room.get(ws)
+    room_id = ws_to_room.get(ws) or data.get("roomId")
     if not room_id or room_id not in active_rooms:
         return
     room = active_rooms[room_id]

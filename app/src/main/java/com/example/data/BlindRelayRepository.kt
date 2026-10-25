@@ -51,8 +51,7 @@ class BlindRelayRepository(context: Context? = null) {
     private val roomStateFlow = MutableStateFlow<BlindRoomDoc?>(null)
 
     // Envelopes received from peer
-    private val envelopesFlow = MutableSharedFlow<BlindEnvelopeDoc>(replay = 50)
-    private val envelopeHistory = mutableListOf<BlindEnvelopeDoc>()
+    private val envelopesStateFlow = MutableStateFlow<List<BlindEnvelopeDoc>>(emptyList())
 
     // Current active room ID and user credentials
     private var currentRoomId: String? = null
@@ -156,12 +155,7 @@ class BlindRelayRepository(context: Context? = null) {
                         ttlSeconds = envJson.optLong("ttlSeconds"),
                         createdAt = RelayTimestamp()
                     )
-                    synchronized(envelopeHistory) {
-                        envelopeHistory.add(env)
-                    }
-                    scope.launch {
-                        envelopesFlow.emit(env)
-                    }
+                    envelopesStateFlow.value = envelopesStateFlow.value + env
                 }
 
                 "peer_left" -> {
@@ -220,10 +214,7 @@ class BlindRelayRepository(context: Context? = null) {
         myPubKey = hostPubKey
         mySalt = ephemeralSalt
         currentRoomId = customRoomId
-
-        synchronized(envelopeHistory) {
-            envelopeHistory.clear()
-        }
+        envelopesStateFlow.value = emptyList()
 
         val initialRoom = BlindRoomDoc(
             id = customRoomId,
@@ -277,8 +268,9 @@ class BlindRelayRepository(context: Context? = null) {
         ttlSeconds: Int,
         envelopeId: String = "env_${UUID.randomUUID().toString().replace("-", "")}"
     ): Result<String> {
+        val effectiveRoomId = currentRoomId ?: roomId
         val envObj = JSONObject().apply {
-            put("roomId", roomId)
+            put("roomId", effectiveRoomId)
             put("senderUid", senderNodeId)
             put("ratchetStep", ratchetStep)
             put("iv", ivBase64)
@@ -288,7 +280,7 @@ class BlindRelayRepository(context: Context? = null) {
 
         val msg = JSONObject().apply {
             put("action", "send_envelope")
-            put("roomId", roomId)
+            put("roomId", effectiveRoomId)
             put("envelope", envObj)
         }
         sendJson(msg)
@@ -296,17 +288,11 @@ class BlindRelayRepository(context: Context? = null) {
     }
 
     fun observeLiveRoomEnvelopes(roomId: String): Flow<List<BlindEnvelopeDoc>> {
-        return envelopesFlow.asSharedFlow().map {
-            synchronized(envelopeHistory) {
-                envelopeHistory.toList()
-            }
-        }
+        return envelopesStateFlow.asStateFlow()
     }
 
     suspend fun deleteLiveEnvelope(roomId: String, envelopeId: String): Result<Unit> {
-        synchronized(envelopeHistory) {
-            envelopeHistory.removeAll { it.id == envelopeId }
-        }
+        envelopesStateFlow.value = envelopesStateFlow.value.filter { it.id != envelopeId }
         return Result.success(Unit)
     }
 
@@ -317,9 +303,7 @@ class BlindRelayRepository(context: Context? = null) {
         }
         sendJson(leaveMsg)
 
-        synchronized(envelopeHistory) {
-            envelopeHistory.clear()
-        }
+        envelopesStateFlow.value = emptyList()
         roomStateFlow.value = BlindRoomDoc(id = roomId, status = "shredded")
         currentRoomId = null
         return Result.success(Unit)
