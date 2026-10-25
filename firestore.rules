@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 4.1: Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidBlindRoom(data) {
+      return data.hostUid is string && data.hostUid.size() >= 1 && data.hostUid.size() <= 128 &&
+             data.guestUid is string && data.guestUid.size() <= 128 &&
+             data.hostPubKey is string && data.hostPubKey.size() <= 512 &&
+             data.guestPubKey is string && data.guestPubKey.size() <= 512 &&
+             data.ephemeralSalt is string && data.ephemeralSalt.size() >= 8 && data.ephemeralSalt.size() <= 256 &&
+             data.status is string && (data.status == 'waiting' || data.status == 'active' || data.status == 'shredded') &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBlindEnvelope(data) {
+      return data.roomId is string && data.roomId.size() >= 1 && data.roomId.size() <= 128 &&
+             data.senderUid is string && data.senderUid.size() >= 1 && data.senderUid.size() <= 128 &&
+             data.participantUids is list && data.participantUids.size() >= 1 && data.participantUids.size() <= 2 &&
+             data.participantUids[0] is string && data.participantUids[0].size() >= 1 && data.participantUids[0].size() <= 128 &&
+             data.ratchetStep is int && data.ratchetStep >= 0 && data.ratchetStep <= 1000000 &&
+             data.iv is string && data.iv.size() >= 8 && data.iv.size() <= 64 &&
+             data.ciphertext is string && data.ciphertext.size() >= 8 && data.ciphertext.size() <= 8192 &&
+             data.ttlSeconds is int && (data.ttlSeconds == 0 || data.ttlSeconds == 15 || data.ttlSeconds == 30 || data.ttlSeconds == 60) &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    match /rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId) && (
+        existing().status == 'waiting' ||
+        existing().hostUid == request.auth.uid ||
+        existing().guestUid == request.auth.uid
+      );
+
+      allow list: if isSignedIn() && (
+        existing().status == 'waiting' ||
+        existing().hostUid == request.auth.uid ||
+        existing().guestUid == request.auth.uid
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       incoming().keys().hasAll(['hostUid', 'guestUid', 'hostPubKey', 'guestPubKey', 'ephemeralSalt', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['hostUid', 'guestUid', 'hostPubKey', 'guestPubKey', 'ephemeralSalt', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().hostUid == request.auth.uid &&
+                       incoming().guestUid == '' &&
+                       incoming().hostPubKey.size() >= 10 &&
+                       incoming().guestPubKey == '' &&
+                       incoming().status == 'waiting' &&
+                       isValidBlindRoom(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       isValidBlindRoom(incoming()) &&
+                       existing().status != 'shredded' &&
+                       incoming().hostUid == existing().hostUid &&
+                       incoming().ephemeralSalt == existing().ephemeralSalt &&
+                       incoming().createdAt == existing().createdAt && (
+                         (existing().status == 'waiting' &&
+                          incoming().status == 'active' &&
+                          incoming().hostPubKey == existing().hostPubKey &&
+                          incoming().guestUid.size() >= 1 &&
+                          incoming().guestPubKey.size() >= 10 &&
+                          (incoming().guestUid == request.auth.uid || existing().hostUid == request.auth.uid) &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['guestUid', 'guestPubKey', 'status', 'updatedAt'])) ||
+                         ((existing().hostUid == request.auth.uid || existing().guestUid == request.auth.uid) &&
+                          incoming().status == 'shredded' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'hostPubKey', 'guestPubKey', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       (existing().hostUid == request.auth.uid || existing().guestUid == request.auth.uid);
+
+      match /envelopes/{envelopeId} {
+        allow get: if isSignedIn() &&
+                      isValidId(roomId) &&
+                      isValidId(envelopeId) &&
+                      request.auth.uid in existing().participantUids;
+
+        allow list: if isSignedIn() &&
+                       request.auth.uid in existing().participantUids;
+
+        allow create: if isSignedIn() &&
+                         isValidId(roomId) &&
+                         isValidId(envelopeId) &&
+                         incoming().keys().hasAll(['roomId', 'senderUid', 'participantUids', 'ratchetStep', 'iv', 'ciphertext', 'ttlSeconds', 'createdAt']) &&
+                         incoming().keys().hasOnly(['roomId', 'senderUid', 'participantUids', 'ratchetStep', 'iv', 'ciphertext', 'ttlSeconds', 'createdAt']) &&
+                         incoming().roomId == roomId &&
+                         request.auth.uid in incoming().participantUids &&
+                         isValidBlindEnvelope(incoming());
+
+        allow update: if false;
+
+        allow delete: if isSignedIn() &&
+                         isValidId(roomId) &&
+                         isValidId(envelopeId) &&
+                         request.auth.uid in existing().participantUids;
+      }
+    }
+
+    // Accountless Zero-Knowledge Blind Relay collection with strict cryptographic schema validation
+    match /zk_relay/{roomId} {
+      allow get: if isValidId(roomId) && existing().status in ['waiting', 'active', 'shredded'];
+      allow list: if existing().status == 'waiting';
+      allow create: if isValidId(roomId) &&
+                       incoming().keys().hasAll(['hostUid', 'guestUid', 'hostPubKey', 'guestPubKey', 'ephemeralSalt', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['hostUid', 'guestUid', 'hostPubKey', 'guestPubKey', 'ephemeralSalt', 'status', 'createdAt', 'updatedAt']) &&
+                       incoming().status == 'waiting' &&
+                       isValidBlindRoom(incoming());
+      allow update: if isValidId(roomId) &&
+                       isValidBlindRoom(incoming()) &&
+                       existing().status != 'shredded' &&
+                       incoming().hostUid == existing().hostUid &&
+                       incoming().ephemeralSalt == existing().ephemeralSalt &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['guestUid', 'guestPubKey', ' hostPubKey', 'hostPubKey', 'status', 'updatedAt']);
+      allow delete: if isValidId(roomId);
+
+      match /envelopes/{envelopeId} {
+        allow get: if isValidId(roomId) && isValidId(envelopeId) && existing().roomId == roomId;
+        allow list: if existing().roomId == roomId;
+        allow create: if isValidId(roomId) &&
+                         isValidId(envelopeId) &&
+                         incoming().keys().hasAll(['roomId', 'senderUid', 'participantUids', 'ratchetStep', 'iv', 'ciphertext', 'ttlSeconds', 'createdAt']) &&
+                         incoming().keys().hasOnly(['roomId', 'senderUid', 'participantUids', 'ratchetStep', 'iv', 'ciphertext', 'ttlSeconds', 'createdAt']) &&
+                         incoming().roomId == roomId &&
+                         isValidBlindEnvelope(incoming());
+        allow update: if false;
+        allow delete: if isValidId(roomId) && isValidId(envelopeId);
+      }
+    }
+  }
+}

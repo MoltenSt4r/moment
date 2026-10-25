@@ -1,0 +1,6 @@
+{
+  "name": "Moment",
+  "description": "Анонимный Zero-Knowledge E2EE мессенджер для мгновенного защищенного общения со случайными собеседниками в эстетике Material Design 3 Expressive и Monet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

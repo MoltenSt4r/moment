@@ -1,0 +1,120 @@
+{
+  "entities": {
+    "BlindRoom": {
+      "title": "BlindRoom",
+      "description": "Zero-knowledge ephemeral matchmaking room storing only public ECDH keys and session salt. No private keys or plaintext ever touch Firestore.",
+      "type": "object",
+      "properties": {
+        "hostUid": {
+          "type": "string",
+          "description": "Authenticated UID of the host participant."
+        },
+        "guestUid": {
+          "type": "string",
+          "description": "Authenticated UID of the guest participant, or empty while waiting."
+        },
+        "hostPubKey": {
+          "type": "string",
+          "description": "Base64-encoded X.509 SubjectPublicKeyInfo ECDH P-256 public key of the host."
+        },
+        "guestPubKey": {
+          "type": "string",
+          "description": "Base64-encoded X.509 SubjectPublicKeyInfo ECDH P-256 public key of the guest."
+        },
+        "ephemeralSalt": {
+          "type": "string",
+          "description": "Base64-encoded 256-bit random salt used for HKDF-SHA256 session key derivation."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "active", "shredded"],
+          "description": "Lifecycle status of the ephemeral room."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of room creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last room state transition (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "hostUid",
+        "guestUid",
+        "hostPubKey",
+        "guestPubKey",
+        "ephemeralSalt",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BlindEnvelope": {
+      "title": "BlindEnvelope",
+      "description": "Immutable AES-256-GCM encrypted packet containing message, reply quote, or emoji reaction.",
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "description": "Parent room ID."
+        },
+        "senderUid": {
+          "type": "string",
+          "description": "Identifier of the packet sender."
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Bounded list (1..2) of participant UIDs authorized to read/delete this envelope."
+        },
+        "ratchetStep": {
+          "type": "integer",
+          "description": "Monotonic HKDF-SHA256 ratchet counter used to derive the per-message key."
+        },
+        "iv": {
+          "type": "string",
+          "description": "Base64-encoded 96-bit random initialization vector for AES-256-GCM."
+        },
+        "ciphertext": {
+          "type": "string",
+          "description": "Base64-encoded AES-256-GCM ciphertext including 128-bit authentication tag."
+        },
+        "ttlSeconds": {
+          "type": "integer",
+          "description": "Disappearing message timer in seconds (0, 15, 30, or 60)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when envelope was relayed (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "roomId",
+        "senderUid",
+        "participantUids",
+        "ratchetStep",
+        "iv",
+        "ciphertext",
+        "ttlSeconds",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": {
+        "$ref": "#/entities/BlindRoom"
+      },
+      "description": "Ephemeral matchmaking rooms storing public ECDH parameters."
+    },
+    "/rooms/{roomId}/envelopes/{envelopeId}": {
+      "schema": {
+        "$ref": "#/entities/BlindEnvelope"
+      },
+      "description": "Encrypted AES-256-GCM envelopes scoped to room participants."
+    }
+  }
+}

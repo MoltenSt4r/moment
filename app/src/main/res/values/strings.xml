@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Moment</string>
+    <string name="brand_wordmark">Moment</string>
+    <string name="tagline_zero_knowledge">Мгновенный анонимный чат • Zero-Knowledge E2EE</string>
+    <string name="auth_title">Вход в защищенный узел</string>
+    <string name="auth_subtitle">Авторизация используется только для защиты от спам-ботов. Ваши ключи шифрования создаются в ОЗУ устройства — серверы Google никогда не видят ключи и текст сообщений.</string>
+    <string name="sign_in_google">Войти через Google</string>
+    <string name="start_button">Старт</string>
+    <string name="searching_peer">Поиск собеседника…</string>
+    <string name="cancel_search">Отменить поиск</string>
+    <string name="ttl_label">Таймер исчезающих сообщений</string>
+    <string name="ttl_off">Выкл</string>
+    <string name="ttl_15s">15 сек</string>
+    <string name="ttl_30s">30 сек</string>
+    <string name="ttl_60s">60 сек</string>
+    <string name="security_shield_active">FLAG_SECURE • ECDH-256 + AES-GCM • Ключи только в ОЗУ</string>
+    <string name="gesture_hint_pull">Потяните сверху вниз до галочки ✓: ниже — новый чат, вбок — выход в меню</string>
+    <string name="gesture_pulling">Тяните вниз для фиксации…</string>
+    <string name="gesture_armed_checkmark">✓ Зафиксировано: ниже — новый собеседник • вбок — выход</string>
+    <string name="gesture_deep_pull_next">Отпустите для поиска нового собеседника</string>
+    <string name="gesture_side_swipe_exit">Отпустите для выхода и уничтожения ключей</string>
+    <string name="message_placeholder">Зашифрованное сообщение…</string>
+    <string name="replying_to">Ответ на сообщение</string>
+    <string name="peer_online">Собеседник на связи • E2EE</string>
+    <string name="peer_typing">печатает…</string>
+    <string name="crypto_audit_title">Криптографический паспорт сессии</string>
+    <string name="sign_out">Выйти из аккаунта</string>
+</resources>
