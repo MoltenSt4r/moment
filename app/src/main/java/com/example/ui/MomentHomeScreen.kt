@@ -100,8 +100,6 @@ fun MomentHomeScreen(
     customWallpaperBitmap: androidx.compose.ui.graphics.ImageBitmap? = null,
     hasCustomWallpaper: Boolean = false,
     onClearWallpaper: () -> Unit = {},
-    isLiquidGlassEnabled: Boolean = true,
-    onToggleLiquidGlass: (Boolean) -> Unit = {},
     onSelectSystemMonet: () -> Unit = {},
     onSelectCustomSeed: (Color) -> Unit = {},
     onPickWallpaperUri: (Uri) -> Unit = {},
@@ -134,26 +132,12 @@ fun MomentHomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (isLiquidGlassEnabled) 0.38f else 0.50f))
-            )
-        } else if (isLiquidGlassEnabled) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF070B19),
-                                Color(0xFF0F172A),
-                                Color(0xFF0B1120)
-                            )
-                        )
-                    )
+                    .background(Color.Black.copy(alpha = 0.50f))
             )
         }
 
         Scaffold(
-            containerColor = if (customWallpaperBitmap != null || isLiquidGlassEnabled) Color.Transparent else colorScheme.surface,
+            containerColor = if (customWallpaperBitmap != null) Color.Transparent else colorScheme.surface,
             contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 TopAppBar(
@@ -164,45 +148,22 @@ fun MomentHomeScreen(
                                 hapticEngine.onReactionToggled()
                                 showMonetSheet = true
                             },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .then(
-                                    if (isLiquidGlassEnabled) {
-                                        Modifier.liquidGlass(
-                                            shape = CircleShape,
-                                            alpha = 0.12f,
-                                            borderAlpha = 0.22f
-                                        )
-                                    } else Modifier
-                                )
-                                .testTag("monet_palette_button")
+                            modifier = Modifier.testTag("monet_palette_button")
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Palette,
                                 contentDescription = "Цвета Monet и приватность",
-                                tint = if (customWallpaperBitmap != null || isLiquidGlassEnabled) Color.White else colorScheme.onSurfaceVariant
+                                tint = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
                         IconButton(
                             onClick = onResetIdentity,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .then(
-                                    if (isLiquidGlassEnabled) {
-                                        Modifier.liquidGlass(
-                                            shape = CircleShape,
-                                            alpha = 0.12f,
-                                            borderAlpha = 0.22f
-                                        )
-                                    } else Modifier
-                                )
-                                .testTag("reset_identity_button")
+                            modifier = Modifier.testTag("reset_identity_button")
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.Refresh,
                                 contentDescription = "Сбросить ключи",
-                                tint = if (customWallpaperBitmap != null || isLiquidGlassEnabled) Color.White else colorScheme.onSurfaceVariant
+                                tint = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurfaceVariant
                             )
                         }
                     },
@@ -233,7 +194,7 @@ fun MomentHomeScreen(
                     fontWeight = FontWeight.Black,
                     fontSize = 56.sp,
                     letterSpacing = (-1.8).sp,
-                    color = if (isLiquidGlassEnabled || customWallpaperBitmap != null) Color.White else colorScheme.onSurface,
+                    color = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurface,
                     modifier = Modifier.testTag("moment_wordmark_home")
                 )
 
@@ -270,111 +231,82 @@ fun MomentHomeScreen(
                     label = "md3_start_width"
                 )
 
-                val startButtonModifier = if (isLiquidGlassEnabled) {
-                    Modifier
+                Surface(
+                    onClick = {
+                        if (isSearching) {
+                            hapticEngine.onSessionShredded()
+                            onCancelSearch()
+                        } else {
+                            hapticEngine.onStartMatchmaking()
+                            onStartClicked()
+                        }
+                    },
+                    interactionSource = interactionSource,
+                    shape = RoundedCornerShape(cornerRadius),
+                    color = if (isSearching) colorScheme.secondaryContainer else colorScheme.primary,
+                    contentColor = if (isSearching) colorScheme.onSecondaryContainer else colorScheme.onPrimary,
+                    modifier = Modifier
                         .width(buttonWidth)
                         .height(88.dp)
                         .scale(buttonScale)
-                        .liquidGlass(
-                            shape = RoundedCornerShape(cornerRadius),
-                            alpha = if (isSearching) 0.16f else 0.85f,
-                            borderAlpha = if (isSearching) 0.28f else 0.40f,
-                            isMine = !isSearching
-                        )
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {
-                            if (isSearching) {
-                                hapticEngine.onSessionShredded()
-                                onCancelSearch()
-                            } else {
-                                hapticEngine.onStartMatchmaking()
-                                onStartClicked()
-                            }
-                        }
                         .testTag("start_matchmaking_button")
-                } else {
-                    Modifier
-                        .width(buttonWidth)
-                        .height(88.dp)
-                        .scale(buttonScale)
-                        .clip(RoundedCornerShape(cornerRadius))
-                        .background(if (isSearching) colorScheme.secondaryContainer else colorScheme.primary)
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {
-                            if (isSearching) {
-                                hapticEngine.onSessionShredded()
-                                onCancelSearch()
-                            } else {
-                                hapticEngine.onStartMatchmaking()
-                                onStartClicked()
-                            }
-                        }
-                        .testTag("start_matchmaking_button")
-                }
-
-                Box(
-                    modifier = startButtonModifier,
-                    contentAlignment = Alignment.Center
                 ) {
-                    AnimatedContent(
-                        targetState = uiState.phase,
-                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
-                        label = "start_content"
-                    ) { phase ->
-                        when (phase) {
-                            SessionPhase.SEARCHING -> {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(horizontal = 20.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(22.dp),
-                                        color = if (isLiquidGlassEnabled) Color.White else colorScheme.onSecondaryContainer,
-                                        strokeWidth = 2.5.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(contentAlignment = Alignment.Center) {
+                        AnimatedContent(
+                            targetState = uiState.phase,
+                            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
+                            label = "start_content"
+                        ) { phase ->
+                            when (phase) {
+                                SessionPhase.SEARCHING -> {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = 20.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(22.dp),
+                                            color = colorScheme.onSecondaryContainer,
+                                            strokeWidth = 2.5.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Ожидание…",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                }
+
+                                SessionPhase.HANDSHAKING -> {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(horizontal = 20.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(22.dp),
+                                            color = colorScheme.onSecondaryContainer,
+                                            strokeWidth = 2.5.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Обмен ключами…",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = colorScheme.onSecondaryContainer
+                                        )
+                                    }
+                                }
+
+                                else -> {
                                     Text(
-                                        text = "Ожидание…",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = if (isLiquidGlassEnabled) Color.White else colorScheme.onSecondaryContainer
+                                        text = stringResource(R.string.start_button),
+                                        fontFamily = MomentRoundedBoldFontFamily,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 26.sp,
+                                        letterSpacing = (-0.5).sp
                                     )
                                 }
-                            }
-
-                            SessionPhase.HANDSHAKING -> {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.padding(horizontal = 20.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(22.dp),
-                                        color = if (isLiquidGlassEnabled) Color.White else colorScheme.onSecondaryContainer,
-                                        strokeWidth = 2.5.dp
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = "Обмен ключами…",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = if (isLiquidGlassEnabled) Color.White else colorScheme.onSecondaryContainer
-                                    )
-                                }
-                            }
-
-                            else -> {
-                                Text(
-                                    text = stringResource(R.string.start_button),
-                                    fontFamily = MomentRoundedBoldFontFamily,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 26.sp,
-                                    letterSpacing = (-0.5).sp,
-                                    color = if (isLiquidGlassEnabled) Color.White else colorScheme.onPrimary
-                                )
                             }
                         }
                     }
@@ -391,42 +323,30 @@ fun MomentHomeScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.cancel_search),
-                            color = if (isLiquidGlassEnabled || customWallpaperBitmap != null) Color.White.copy(alpha = 0.85f) else colorScheme.primary
+                            color = if (customWallpaperBitmap != null) Color.White.copy(alpha = 0.85f) else colorScheme.primary
                         )
                     }
                 }
 
                 AnimatedVisibility(visible = !uiState.statusBannerText.isNullOrBlank() && !isSearching) {
                     uiState.statusBannerText?.let { banner ->
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 18.dp)
-                                .then(
-                                    if (isLiquidGlassEnabled) {
-                                        Modifier.liquidGlass(
-                                            shape = RoundedCornerShape(16.dp),
-                                            alpha = 0.10f,
-                                            borderAlpha = 0.20f
-                                        )
-                                    } else {
-                                        Modifier
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(colorScheme.surfaceContainerHigh)
-                                    }
-                                )
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.padding(top = 18.dp)
                         ) {
                             Text(
                                 text = banner,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isLiquidGlassEnabled || customWallpaperBitmap != null) Color.White.copy(alpha = 0.85f) else colorScheme.onSurfaceVariant
+                                color = colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
                 }
             }
 
-            // Bottom: Liquid Glass capsule or MD3 SegmentedButton for Disappearing Messages Timer
+            // Bottom: Standard MD3 SegmentedButtonRow for Disappearing Messages Timer
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -440,71 +360,21 @@ fun MomentHomeScreen(
                     60 to "60с"
                 )
 
-                if (isLiquidGlassEnabled) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .liquidGlass(
-                                shape = CircleShape,
-                                alpha = 0.10f,
-                                borderAlpha = 0.20f
-                            )
-                            .padding(4.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    ttlOptions.forEachIndexed { index, (seconds, label) ->
+                        SegmentedButton(
+                            selected = uiState.defaultTtlSeconds == seconds,
+                            onClick = {
+                                hapticEngine.onReactionToggled()
+                                onSelectTtl(seconds)
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = ttlOptions.size
+                            ),
+                            modifier = Modifier.testTag("ttl_chip_$seconds")
                         ) {
-                            ttlOptions.forEach { (seconds, label) ->
-                                val isSelected = uiState.defaultTtlSeconds == seconds
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isSelected) {
-                                                Color(0xFF3B82F6).copy(alpha = 0.45f)
-                                            } else {
-                                                Color.Transparent
-                                            }
-                                        )
-                                        .clickable {
-                                            hapticEngine.onReactionToggled()
-                                            onSelectTtl(seconds)
-                                        }
-                                        .testTag("ttl_chip_$seconds"),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.65f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        ttlOptions.forEachIndexed { index, (seconds, label) ->
-                            SegmentedButton(
-                                selected = uiState.defaultTtlSeconds == seconds,
-                                onClick = {
-                                    hapticEngine.onReactionToggled()
-                                    onSelectTtl(seconds)
-                                },
-                                shape = SegmentedButtonDefaults.itemShape(
-                                    index = index,
-                                    count = ttlOptions.size
-                                ),
-                                modifier = Modifier.testTag("ttl_chip_$seconds")
-                            ) {
-                                Text(text = label)
-                            }
+                            Text(text = label)
                         }
                     }
                 }
@@ -607,30 +477,6 @@ fun MomentHomeScreen(
                     }
                 }
 
-                // 3. Liquid Glass Mode Switch
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Режим Liquid Glass",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Эффект жидкого стекла с прозрачностью и глянцевым преломлением",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = isLiquidGlassEnabled,
-                        onCheckedChange = onToggleLiquidGlass
-                    )
-                }
 
                 if (hasCustomWallpaper) {
                     FilledTonalButton(

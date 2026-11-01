@@ -48,7 +48,6 @@ data class MomentUiState(
     val isPeerConnected: Boolean = false,
     val isPeerDisconnected: Boolean = false,
     val peerDisconnectedNotice: String? = null,
-    val isLiquidGlassEnabled: Boolean = true,
     val handshakeVerification: HandshakeVerification? = null,
     val messages: List<MomentMessage> = emptyList(),
     val replyDraft: ReplyDraft? = null,
@@ -94,10 +93,6 @@ class MomentViewModel(
 
     fun setDefaultTtlSeconds(seconds: Int) {
         _uiState.update { it.copy(defaultTtlSeconds = seconds) }
-    }
-
-    fun setLiquidGlassEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(isLiquidGlassEnabled = enabled) }
     }
 
     fun setReplyDraft(message: MomentMessage?) {

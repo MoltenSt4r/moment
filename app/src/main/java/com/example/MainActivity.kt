@@ -267,9 +267,6 @@ fun MomentZeroKnowledgeApp(
                         }
                         viewModel.setDefaultTtlSeconds(next)
                     },
-                    onToggleLiquidGlass = {
-                        viewModel.setLiquidGlassEnabled(!uiState.isLiquidGlassEnabled)
-                    },
                     onSwitchToNewPartner = {
                         scrubSystemClipboard(context)
                         viewModel.switchToNewPartner()
@@ -291,8 +288,6 @@ fun MomentZeroKnowledgeApp(
                     customWallpaperBitmap = customWallpaperBitmap,
                     hasCustomWallpaper = customWallpaperBitmap != null,
                     onClearWallpaper = onClearWallpaper,
-                    isLiquidGlassEnabled = uiState.isLiquidGlassEnabled,
-                    onToggleLiquidGlass = { viewModel.setLiquidGlassEnabled(it) },
                     onSelectSystemMonet = onSelectSystemMonet,
                     onSelectCustomSeed = onSelectCustomSeed,
                     onPickWallpaperUri = onPickWallpaperUri,

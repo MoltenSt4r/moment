@@ -90,14 +90,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.1.${{ github.run_number }}
-          name: "Moment v1.1.${{ github.run_number }} — Liquid Glass Edition"
+          name: "Moment v1.1.${{ github.run_number }}"
           body: |
             ## Moment v1.1 Release
-            - **Material 3 Liquid Glass Mode**: Modern fluid glass aesthetic with translucent depth across Home and Chat.
-            - **Enhanced Gestures**: Pull-to-exit now seamlessly cancelable by swiping back up.
+            - **Pure Material 3 Design**: Clean, fluid Material You interface with full dynamic color support.
+            - **Enhanced App Icons**: Authentic app logo with pixel-perfect Monet monochrome theming for Nothing OS & Pixel UI.
+            - **Enhanced Gestures**: Pull-to-exit indicator can now be canceled anytime by swiping back up or tapping close.
             - **Custom Chat Wallpaper**: User background image support with automatic contrast grading.
             - **Full Emoji Reactions**: Searchable catalog with all emoji categories and particle bursts.
-            - **Peer Disconnect Notification**: Unified MD3 bottom action bar with zero duplication and zero-knowledge cleanup.
+            - **Peer Disconnect UX**: Clean MD3 bottom action sheet with instant RAM key destruction notification (no duplication).
           draft: false
           prerelease: false
           files: |

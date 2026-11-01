@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -139,7 +140,6 @@ fun MomentChatScreen(
     onSetReply: (MomentMessage?) -> Unit,
     onToggleReaction: (String, String) -> Unit,
     onCycleTtl: () -> Unit,
-    onToggleLiquidGlass: () -> Unit = {},
     onSwitchToNewPartner: () -> Unit,
     onExitToMainMenu: () -> Unit
 ) {
@@ -152,8 +152,6 @@ fun MomentChatScreen(
     var activeReactionMessageId by remember { mutableStateOf<String?>(null) }
     var showFullEmojiPicker by remember { mutableStateOf(false) }
     var burstingEmoji by remember { mutableStateOf<String?>(null) }
-
-    val isLiquidGlass = uiState.isLiquidGlassEnabled
 
     BackHandler {
         inputText = ""
@@ -267,24 +265,14 @@ fun MomentChatScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (isLiquidGlass) 0.35f else 0.48f))
+                    .background(Color.Black.copy(alpha = 0.45f))
             )
         }
 
         Scaffold(
-            containerColor = if (customWallpaperBitmap != null || isLiquidGlass) Color.Transparent else colorScheme.surface,
+            containerColor = if (customWallpaperBitmap != null) Color.Transparent else colorScheme.surface,
             contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
-                val topBarModifier = if (isLiquidGlass) {
-                    Modifier.liquidGlass(
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-                        alpha = 0.12f,
-                        borderAlpha = 0.22f
-                    )
-                } else {
-                    Modifier
-                }
-
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -294,14 +282,14 @@ fun MomentChatScreen(
                                 fontWeight = FontWeight.Black,
                                 fontSize = 24.sp,
                                 letterSpacing = (-0.8).sp,
-                                color = if (customWallpaperBitmap != null || isLiquidGlass) Color.White else colorScheme.onSurface
+                                color = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurface
                             )
                             if (uiState.isPeerTyping && !uiState.isPeerDisconnected) {
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = stringResource(R.string.peer_typing),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (customWallpaperBitmap != null || isLiquidGlass) Color(0xFF93C5FD) else colorScheme.primary
+                                    color = if (customWallpaperBitmap != null) Color(0xFF93C5FD) else colorScheme.primary
                                 )
                             }
                         }
@@ -315,31 +303,27 @@ fun MomentChatScreen(
                             label = {
                                 Text(
                                     text = if (uiState.defaultTtlSeconds > 0) "${uiState.defaultTtlSeconds}с" else "Выкл",
-                                    color = if (customWallpaperBitmap != null || isLiquidGlass) Color.White else colorScheme.onSurface
+                                    color = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurface
                                 )
                             },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Timer,
                                     contentDescription = null,
-                                    tint = if (customWallpaperBitmap != null || isLiquidGlass) Color(0xFF93C5FD) else colorScheme.primary,
+                                    tint = if (customWallpaperBitmap != null) Color(0xFF93C5FD) else colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                             },
                             shape = CircleShape,
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (isLiquidGlass) Color.White.copy(alpha = 0.10f) else Color.Transparent
-                            ),
-                            border = if (isLiquidGlass) BorderStroke(0.85.dp, Color.White.copy(alpha = 0.20f)) else AssistChipDefaults.assistChipBorder(enabled = true),
                             modifier = Modifier
                                 .padding(end = 12.dp)
                                 .testTag("chat_ttl_toggle_pill")
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (customWallpaperBitmap != null || isLiquidGlass) Color.Transparent else colorScheme.surface
+                        containerColor = if (customWallpaperBitmap != null) Color.Transparent else colorScheme.surface
                     ),
-                    modifier = topBarModifier
+                    modifier = Modifier
                         .pointerInput(Unit) {
                             detectDragGestures(
                                 onDrag = { change, dragAmount ->
@@ -361,7 +345,6 @@ fun MomentChatScreen(
                 ) { isDisconnected ->
                     if (isDisconnected) {
                         PeerDepartedBottomBar(
-                            isLiquidGlass = isLiquidGlass,
                             onSwitchToNewPartner = {
                                 hapticEngine.onReactionToggled()
                                 onSwitchToNewPartner()
@@ -374,7 +357,6 @@ fun MomentChatScreen(
                     } else {
                         MomentMessageComposer(
                             inputText = inputText,
-                            isLiquidGlass = isLiquidGlass,
                             isCustomWallpaper = customWallpaperBitmap != null,
                             onInputTextChange = { next ->
                                 inputText = next
@@ -449,7 +431,6 @@ fun MomentChatScreen(
                             MomentMessageBubbleItem(
                                 message = message,
                                 nowEpochMs = uiState.nowEpochMs,
-                                isLiquidGlass = isLiquidGlass,
                                 isCustomWallpaper = customWallpaperBitmap != null,
                                 showReactionPicker = activeReactionMessageId == message.id && !message.isDisintegrating,
                                 onSwipeToReply = {
@@ -482,7 +463,6 @@ fun MomentChatScreen(
                         pullProgress = (pullDragY / checkmarkThresholdPx).coerceIn(0f, 1.5f),
                         dragOffsetX = pullDragX,
                         dragOffsetY = pullDragY,
-                        isLiquidGlass = isLiquidGlass,
                         onCancelPull = { resetPull() }
                     )
                 }
@@ -519,89 +499,78 @@ fun MomentChatScreen(
  */
 @Composable
 private fun PeerDepartedBottomBar(
-    isLiquidGlass: Boolean,
     onSwitchToNewPartner: () -> Unit,
     onExitToMainMenu: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val barModifier = if (isLiquidGlass) {
-        Modifier
-            .fillMaxWidth()
-            .liquidGlass(
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                alpha = 0.12f,
-                borderAlpha = 0.25f
-            )
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    } else {
-        Modifier
-            .fillMaxWidth()
-            .background(colorScheme.surfaceContainerHigh)
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    }
-
-    Column(
-        modifier = barModifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        color = colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(
-            text = "Собеседник покинул чат",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
-        Text(
-            text = "Ключи сессии уничтожены",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.65f)
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Column(
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FilledTonalButton(
-                onClick = onSwitchToNewPartner,
-                shape = CircleShape,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = colorScheme.primary,
-                    contentColor = colorScheme.onPrimary
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag("peer_left_new_chat_button")
+            Text(
+                text = "Собеседник покинул чат",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.onSurface
+            )
+            Text(
+                text = "Все временные ключи шифрования в RAM уничтожены",
+                style = MaterialTheme.typography.bodySmall,
+                color = colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Новый поиск", fontWeight = FontWeight.Bold)
-            }
+                Button(
+                    onClick = onSwitchToNewPartner,
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colorScheme.primary,
+                        contentColor = colorScheme.onPrimary
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("peer_left_new_chat_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Новый поиск", fontWeight = FontWeight.Bold)
+                }
 
-            FilledTonalButton(
-                onClick = onExitToMainMenu,
-                shape = CircleShape,
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = Color.White.copy(alpha = 0.12f),
-                    contentColor = Color.White
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag("peer_left_exit_menu_button")
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "В меню")
+                FilledTonalButton(
+                    onClick = onExitToMainMenu,
+                    shape = CircleShape,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = colorScheme.secondaryContainer,
+                        contentColor = colorScheme.onSecondaryContainer
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("peer_left_exit_menu_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "В меню")
+                }
             }
         }
     }
@@ -711,7 +680,6 @@ private fun Md3PullForkIndicator(
     pullProgress: Float,
     dragOffsetX: Float,
     dragOffsetY: Float,
-    isLiquidGlass: Boolean,
     onCancelPull: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -756,38 +724,19 @@ private fun Md3PullForkIndicator(
             .padding(top = animatedOffsetY),
         contentAlignment = Alignment.TopCenter
     ) {
-        val capsuleModifier = if (isLiquidGlass) {
-            Modifier
-                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
-                .liquidGlass(
-                    shape = CircleShape,
-                    alpha = 0.16f,
-                    borderAlpha = 0.32f
-                )
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures { change, dragAmount ->
-                        if (dragAmount < -8f) {
-                            change.consume()
-                            onCancelPull()
-                        }
+        val capsuleModifier = Modifier
+            .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+            .clip(CircleShape)
+            .background(containerColor)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, dragAmount ->
+                    if (dragAmount < -8f) {
+                        change.consume()
+                        onCancelPull()
                     }
                 }
-                .testTag("pull_fork_gesture_capsule")
-        } else {
-            Modifier
-                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
-                .clip(CircleShape)
-                .background(containerColor)
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures { change, dragAmount ->
-                        if (dragAmount < -8f) {
-                            change.consume()
-                            onCancelPull()
-                        }
-                    }
-                }
-                .testTag("pull_fork_gesture_capsule")
-        }
+            }
+            .testTag("pull_fork_gesture_capsule")
 
         Box(modifier = capsuleModifier) {
             Row(
@@ -803,7 +752,7 @@ private fun Md3PullForkIndicator(
                         CircularProgressIndicator(
                             progress = { pullProgress.coerceIn(0.1f, 0.98f) },
                             modifier = Modifier.size(24.dp),
-                            color = if (isLiquidGlass) Color(0xFF60A5FA) else contentColor,
+                            color = contentColor,
                             strokeWidth = 2.5.dp
                         )
                     }
@@ -813,7 +762,7 @@ private fun Md3PullForkIndicator(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Готово",
                             modifier = Modifier.size(20.dp),
-                            tint = Color.White
+                            tint = contentColor
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
@@ -821,12 +770,12 @@ private fun Md3PullForkIndicator(
                                 text = "Ниже — новый чат • Вбок — выход",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = contentColor
                             )
                             Text(
                                 text = "Смахните вверх для отмены",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.65f)
+                                color = contentColor.copy(alpha = 0.75f)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -837,7 +786,7 @@ private fun Md3PullForkIndicator(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Отмена",
-                                tint = Color.White,
+                                tint = contentColor,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -848,14 +797,14 @@ private fun Md3PullForkIndicator(
                             imageVector = Icons.Outlined.Refresh,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = Color.White
+                            tint = contentColor
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Новый собеседник",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = contentColor
                         )
                     }
 
@@ -864,14 +813,14 @@ private fun Md3PullForkIndicator(
                             imageVector = Icons.AutoMirrored.Outlined.ExitToApp,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
-                            tint = Color.White
+                            tint = contentColor
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Выход в меню",
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = contentColor
                         )
                     }
 
@@ -887,7 +836,6 @@ private fun Md3PullForkIndicator(
 private fun MomentMessageBubbleItem(
     message: MomentMessage,
     nowEpochMs: Long,
-    isLiquidGlass: Boolean,
     isCustomWallpaper: Boolean,
     showReactionPicker: Boolean,
     onSwipeToReply: () -> Unit,
@@ -941,18 +889,11 @@ private fun MomentMessageBubbleItem(
             enter = fadeIn() + expandVertically() + scaleIn(initialScale = 0.85f),
             exit = fadeOut() + shrinkVertically()
         ) {
-            val pickerModifier = if (isLiquidGlass) {
-                Modifier
-                    .padding(bottom = 6.dp)
-                    .liquidGlass(shape = CircleShape, alpha = 0.16f, borderAlpha = 0.30f)
-                    .testTag("reaction_picker_${message.id}")
-            } else {
-                Modifier
-                    .padding(bottom = 6.dp)
-                    .clip(CircleShape)
-                    .background(colorScheme.surfaceContainerHighest)
-                    .testTag("reaction_picker_${message.id}")
-            }
+            val pickerModifier = Modifier
+                .padding(bottom = 6.dp)
+                .clip(CircleShape)
+                .background(colorScheme.surfaceContainerHighest)
+                .testTag("reaction_picker_${message.id}")
 
             Box(modifier = pickerModifier) {
                 Row(
@@ -977,13 +918,13 @@ private fun MomentMessageBubbleItem(
                         modifier = Modifier
                             .size(28.dp)
                             .clip(CircleShape)
-                            .background(if (isLiquidGlass) Color.White.copy(alpha = 0.15f) else colorScheme.primaryContainer)
+                            .background(colorScheme.primaryContainer)
                             .clickable { onOpenFullEmojiPicker() }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Больше реакций",
-                            tint = if (isLiquidGlass) Color.White else colorScheme.onPrimaryContainer,
+                            tint = colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -995,7 +936,7 @@ private fun MomentMessageBubbleItem(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Reply,
                             contentDescription = stringResource(R.string.replying_to),
-                            tint = if (isLiquidGlass) Color.White.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant,
+                            tint = colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1026,31 +967,13 @@ private fun MomentMessageBubbleItem(
                 RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomStart = 6.dp, bottomEnd = 22.dp)
             }
 
-            val bubbleModifier = if (isLiquidGlass) {
-                Modifier
-                    .widthIn(max = 300.dp)
-                    .liquidGlass(
-                        shape = bubbleShape,
-                        tintColor = if (message.isMine) Color(0xFF3B82F6) else Color.White,
-                        alpha = if (message.isMine) 0.65f else 0.10f,
-                        borderAlpha = if (message.isMine) 0.50f else 0.22f,
-                        isMine = message.isMine
-                    )
-            } else {
-                val bubbleContainerColor = if (message.isMine) colorScheme.primaryContainer else colorScheme.surfaceContainerHigh
-                Modifier
-                    .widthIn(max = 300.dp)
-                    .clip(bubbleShape)
-                    .background(bubbleContainerColor)
-            }
+            val bubbleContainerColor = if (message.isMine) colorScheme.primaryContainer else colorScheme.surfaceContainerHigh
+            val bubbleContentColor = if (message.isMine) colorScheme.onPrimaryContainer else colorScheme.onSurface
 
-            val bubbleContentColor = if (isLiquidGlass) {
-                Color.White
-            } else if (message.isMine) {
-                colorScheme.onPrimaryContainer
-            } else {
-                colorScheme.onSurface
-            }
+            val bubbleModifier = Modifier
+                .widthIn(max = 300.dp)
+                .clip(bubbleShape)
+                .background(bubbleContainerColor)
 
             Box(
                 modifier = bubbleModifier
@@ -1102,24 +1025,17 @@ private fun MomentMessageBubbleItem(
             }
         }
 
-        // Reaction Badges with Liquid Glass Styling
+        // Reaction Badges
         if (message.reactions.isNotEmpty()) {
             Row(
                 modifier = Modifier.padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 message.reactions.forEach { (emoji, reactorSet) ->
-                    val badgeModifier = if (isLiquidGlass) {
-                        Modifier
-                            .clip(CircleShape)
-                            .liquidGlass(shape = CircleShape, alpha = 0.16f, borderAlpha = 0.28f)
-                            .clickable { onSelectReaction(emoji) }
-                    } else {
-                        Modifier
-                            .clip(CircleShape)
-                            .background(colorScheme.secondaryContainer)
-                            .clickable { onSelectReaction(emoji) }
-                    }
+                    val badgeModifier = Modifier
+                        .clip(CircleShape)
+                        .background(colorScheme.secondaryContainer)
+                        .clickable { onSelectReaction(emoji) }
 
                     Box(
                         modifier = badgeModifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -1132,7 +1048,7 @@ private fun MomentMessageBubbleItem(
                                 Text(
                                     text = reactorSet.size.toString(),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (isLiquidGlass) Color.White else colorScheme.onSecondaryContainer
+                                    color = colorScheme.onSecondaryContainer
                                 )
                             }
                         }
@@ -1146,7 +1062,6 @@ private fun MomentMessageBubbleItem(
 @Composable
 private fun MomentMessageComposer(
     inputText: String,
-    isLiquidGlass: Boolean,
     isCustomWallpaper: Boolean,
     onInputTextChange: (String) -> Unit,
     replyDraft: com.example.viewmodel.ReplyDraft?,
@@ -1155,31 +1070,18 @@ private fun MomentMessageComposer(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    val composerContainerModifier = if (isLiquidGlass) {
-        Modifier
-            .fillMaxWidth()
-            .liquidGlass(
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                alpha = 0.12f,
-                borderAlpha = 0.25f
-            )
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    } else {
-        Modifier
-            .fillMaxWidth()
-            .background(if (isCustomWallpaper) colorScheme.surface.copy(alpha = 0.85f) else colorScheme.surface)
-            .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    }
+    val composerContainerModifier = Modifier
+        .fillMaxWidth()
+        .background(if (isCustomWallpaper) colorScheme.surface.copy(alpha = 0.85f) else colorScheme.surface)
+        .windowInsetsPadding(WindowInsets.navigationBars)
+        .padding(horizontal = 14.dp, vertical = 8.dp)
 
     Column(modifier = composerContainerModifier) {
         AnimatedVisibility(visible = replyDraft != null) {
             replyDraft?.let { draft ->
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = if (isLiquidGlass) Color.White.copy(alpha = 0.10f) else colorScheme.surfaceContainerLow,
-                    border = if (isLiquidGlass) BorderStroke(0.85.dp, Color.White.copy(alpha = 0.20f)) else null,
+                    color = colorScheme.surfaceContainerLow,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 6.dp)
@@ -1196,14 +1098,14 @@ private fun MomentMessageComposer(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Reply,
                                 contentDescription = null,
-                                tint = if (isLiquidGlass) Color(0xFF60A5FA) else colorScheme.primary,
+                                tint = colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = draft.previewText,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isLiquidGlass) Color.White else colorScheme.onSurfaceVariant,
+                                color = colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -1215,7 +1117,7 @@ private fun MomentMessageComposer(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Отменить ответ",
-                                tint = if (isLiquidGlass) Color.White else colorScheme.onSurfaceVariant,
+                                tint = colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1228,20 +1130,11 @@ private fun MomentMessageComposer(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val inputPillModifier = if (isLiquidGlass) {
-                Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(BorderStroke(0.85.dp, Color.White.copy(alpha = 0.16f)), RoundedCornerShape(28.dp))
-            } else {
-                Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(colorScheme.surfaceContainerHigh)
-            }
+            val inputPillModifier = Modifier
+                .weight(1f)
+                .height(48.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(colorScheme.surfaceContainerHigh)
 
             Box(
                 contentAlignment = Alignment.CenterStart,
@@ -1251,16 +1144,16 @@ private fun MomentMessageComposer(
                     Text(
                         text = "Сообщение",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (isLiquidGlass) Color.White.copy(alpha = 0.50f) else colorScheme.onSurfaceVariant
+                        color = colorScheme.onSurfaceVariant
                     )
                 }
                 BasicTextField(
                     value = inputText,
                     onValueChange = onInputTextChange,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = if (isLiquidGlass) Color.White else colorScheme.onSurface
+                        color = colorScheme.onSurface
                     ),
-                    cursorBrush = SolidColor(if (isLiquidGlass) Color(0xFF60A5FA) else colorScheme.primary),
+                    cursorBrush = SolidColor(colorScheme.primary),
                     maxLines = 3,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Sentences,
@@ -1280,10 +1173,10 @@ private fun MomentMessageComposer(
                 onClick = onSend,
                 enabled = inputText.isNotBlank(),
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = if (isLiquidGlass) Color(0xFF3B82F6) else colorScheme.primary,
-                    contentColor = Color.White,
-                    disabledContainerColor = if (isLiquidGlass) Color.White.copy(alpha = 0.10f) else colorScheme.surfaceContainerHigh,
-                    disabledContentColor = if (isLiquidGlass) Color.White.copy(alpha = 0.30f) else colorScheme.onSurfaceVariant
+                    containerColor = colorScheme.primary,
+                    contentColor = colorScheme.onPrimary,
+                    disabledContainerColor = colorScheme.surfaceContainerHigh,
+                    disabledContentColor = colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                 ),
                 modifier = Modifier
                     .size(48.dp)

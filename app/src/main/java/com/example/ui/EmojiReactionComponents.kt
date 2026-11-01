@@ -69,61 +69,6 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Clean Material 3 Liquid Glass modifier for Moment.
- * Pure translucent depth with smooth refraction gradient and ultra-fine luminous border.
- * Zero distortion artifacts, zero unclipped smudges.
- */
-fun Modifier.liquidGlass(
-    shape: Shape = RoundedCornerShape(24.dp),
-    tintColor: Color = Color.White,
-    alpha: Float = 0.10f,
-    borderAlpha: Float = 0.22f,
-    isMine: Boolean = false
-): Modifier = this
-    .clip(shape)
-    .background(
-        brush = if (isMine) {
-            Brush.linearGradient(
-                colors = listOf(
-                    Color(0xFF2563EB).copy(alpha = 0.85f),
-                    Color(0xFF1D4ED8).copy(alpha = 0.90f)
-                ),
-                start = Offset.Zero,
-                end = Offset.Infinite
-            )
-        } else {
-            Brush.verticalGradient(
-                colors = listOf(
-                    tintColor.copy(alpha = (alpha * 1.35f).coerceIn(0.06f, 0.35f)),
-                    tintColor.copy(alpha = (alpha * 0.70f).coerceIn(0.02f, 0.18f))
-                )
-            )
-        },
-        shape = shape
-    )
-    .border(
-        border = BorderStroke(
-            width = 0.85.dp,
-            brush = Brush.linearGradient(
-                colors = if (isMine) {
-                    listOf(
-                        Color.White.copy(alpha = 0.50f),
-                        Color(0xFF93C5FD).copy(alpha = 0.15f)
-                    )
-                } else {
-                    listOf(
-                        Color.White.copy(alpha = borderAlpha),
-                        Color.White.copy(alpha = borderAlpha * 0.20f)
-                    )
-                },
-                start = Offset.Zero,
-                end = Offset.Infinite
-            )
-        ),
-        shape = shape
-    )
-
-/**
  * Animated Particle for Reaction Explosion
  */
 private data class BurstEmojiParticle(
