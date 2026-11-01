@@ -1,10 +1,5 @@
 package com.example.ui
 
-import android.graphics.Paint
-import android.graphics.RenderEffect
-import android.graphics.RuntimeShader
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -32,7 +27,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -58,265 +52,41 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
-import org.intellij.lang.annotations.Language
-
-@Language("AGSL")
-private const val ROUNDED_RECT_REFRACTION_WITH_DISPERSION_SHADER = """
-uniform shader content;
-uniform float2 size;
-uniform float2 offset;
-uniform float4 cornerRadii;
-uniform float refractionHeight;
-uniform float refractionAmount;
-uniform float depthEffect;
-uniform float chromaticAberration;
-
-float radiusAt(float2 coord, float4 radii) {
-    if (coord.x >= 0.0) {
-        if (coord.y <= 0.0) return radii.y;
-        else return radii.z;
-    } else {
-        if (coord.y <= 0.0) return radii.x;
-        else return radii.w;
-    }
-}
-
-float sdRoundedRect(float2 coord, float2 halfSize, float radius) {
-    float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
-    float outside = length(max(cornerCoord, 0.0)) - radius;
-    float inside = min(max(cornerCoord.x, cornerCoord.y), 0.0);
-    return outside + inside;
-}
-
-float2 gradSdRoundedRect(float2 coord, float2 halfSize, float radius) {
-    float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
-    if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
-        return sign(coord) * normalize(max(cornerCoord, 0.0));
-    } else {
-        float gradX = step(cornerCoord.y, cornerCoord.x);
-        return sign(coord) * float2(gradX, 1.0 - gradX);
-    }
-}
-
-float circleMap(float x) {
-    return 1.0 - sqrt(1.0 - x * x);
-}
-
-half4 main(float2 coord) {
-    float2 halfSize = size * 0.5;
-    float2 centeredCoord = (coord + offset) - halfSize;
-    float radius = radiusAt(coord, cornerRadii);
-    
-    float sd = sdRoundedRect(centeredCoord, halfSize, radius);
-    if (-sd >= refractionHeight) {
-        return content.eval(coord);
-    }
-    sd = min(sd, 0.0);
-    
-    float d = circleMap(1.0 - -sd / refractionHeight) * refractionAmount;
-    float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
-    float2 grad = normalize(gradSdRoundedRect(centeredCoord, halfSize, gradRadius) + depthEffect * normalize(centeredCoord));
-    
-    float2 refractedCoord = coord + d * grad;
-    float dispersionIntensity = chromaticAberration * ((centeredCoord.x * centeredCoord.y) / (halfSize.x * halfSize.y));
-    float2 dispersedCoord = d * grad * dispersionIntensity;
-    
-    half4 color = half4(0.0);
-    
-    half4 red = content.eval(refractedCoord + dispersedCoord);
-    color.r += red.r / 3.5;
-    color.a += red.a / 7.0;
-    
-    half4 orange = content.eval(refractedCoord + dispersedCoord * (2.0 / 3.0));
-    color.r += orange.r / 3.5;
-    color.g += orange.g / 7.0;
-    color.a += orange.a / 7.0;
-    
-    half4 yellow = content.eval(refractedCoord + dispersedCoord * (1.0 / 3.0));
-    color.r += yellow.r / 3.5;
-    color.g += yellow.g / 3.5;
-    color.a += yellow.a / 7.0;
-    
-    half4 green = content.eval(refractedCoord);
-    color.g += green.g / 3.5;
-    color.a += green.a / 7.0;
-    
-    half4 cyan = content.eval(refractedCoord - dispersedCoord * (1.0 / 3.0));
-    color.g += cyan.g / 3.5;
-    color.b += cyan.b / 3.0;
-    color.a += cyan.a / 7.0;
-    
-    half4 blue = content.eval(refractedCoord - dispersedCoord * (2.0 / 3.0));
-    color.b += blue.b / 3.0;
-    color.a += blue.a / 7.0;
-    
-    half4 purple = content.eval(refractedCoord - dispersedCoord);
-    color.r += purple.r / 7.0;
-    color.b += purple.b / 3.0;
-    color.a += purple.a / 7.0;
-    
-    return color;
-}
-"""
-
-@Language("AGSL")
-private const val AMBIENT_HIGHLIGHT_SHADER = """
-uniform float2 size;
-uniform float4 cornerRadii;
-uniform float angle;
-uniform float falloff;
-
-float radiusAt(float2 coord, float4 radii) {
-    if (coord.x >= 0.0) {
-        if (coord.y <= 0.0) return radii.y;
-        else return radii.z;
-    } else {
-        if (coord.y <= 0.0) return radii.x;
-        else return radii.w;
-    }
-}
-
-float sdRoundedRect(float2 coord, float2 halfSize, float radius) {
-    float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
-    float outside = length(max(cornerCoord, 0.0)) - radius;
-    float inside = min(max(cornerCoord.x, cornerCoord.y), 0.0);
-    return outside + inside;
-}
-
-float2 gradSdRoundedRect(float2 coord, float2 halfSize, float radius) {
-    float2 cornerCoord = abs(coord) - (halfSize - float2(radius));
-    if (cornerCoord.x >= 0.0 || cornerCoord.y >= 0.0) {
-        return sign(coord) * normalize(max(cornerCoord, 0.0));
-    } else {
-        float gradX = step(cornerCoord.y, cornerCoord.x);
-        return sign(coord) * float2(gradX, 1.0 - gradX);
-    }
-}
-
-half4 main(float2 coord) {
-    float2 halfSize = size * 0.5;
-    float2 centeredCoord = coord - halfSize;
-    float radius = radiusAt(coord, cornerRadii);
-    
-    float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
-    float2 grad = gradSdRoundedRect(centeredCoord, halfSize, gradRadius);
-    float2 normal = float2(cos(angle), sin(angle));
-    float d = dot(grad, normal);
-    float intensity = pow(abs(d), falloff);
-    float t = step(0.0, d);
-    return half4(t, t, t, 1.0) * intensity;
-}
-"""
-
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-private object AgslLiquidGlass {
-    val refractionShader by lazy {
-        try {
-            RuntimeShader(ROUNDED_RECT_REFRACTION_WITH_DISPERSION_SHADER)
-        } catch (_: Throwable) {
-            null
-        }
-    }
-
-    val highlightShader by lazy {
-        try {
-            RuntimeShader(AMBIENT_HIGHLIGHT_SHADER)
-        } catch (_: Throwable) {
-            null
-        }
-    }
-}
-
-private fun extractCornerRadii(
-    shape: Shape,
-    size: Size,
-    density: Float
-): FloatArray {
-    val minDimension = kotlin.math.min(size.width, size.height)
-    if (shape == CircleShape) {
-        val r = minDimension / 2f
-        return floatArrayOf(r, r, r, r)
-    }
-    if (shape is CornerBasedShape) {
-        val d = Density(density)
-        val ts = shape.topStart.toPx(size, d)
-        val te = shape.topEnd.toPx(size, d)
-        val be = shape.bottomEnd.toPx(size, d)
-        val bs = shape.bottomStart.toPx(size, d)
-        val maxR = minDimension / 2f
-        return floatArrayOf(
-            ts.coerceIn(0f, maxR),
-            te.coerceIn(0f, maxR),
-            be.coerceIn(0f, maxR),
-            bs.coerceIn(0f, maxR)
-        )
-    }
-    val fallback = (24f * density).coerceIn(0f, minDimension / 2f)
-    return floatArrayOf(fallback, fallback, fallback, fallback)
-}
 
 /**
- * Authentic SimpMusic / Kyant Liquid Glass modifier for Material Design 3.
- * Powered by hardware AGSL RuntimeShader on Android 13+ (SDF refraction, chromatic dispersion, and directional ambient highlight),
- * with graceful translucent depth fallback on older Android versions.
+ * Clean Material 3 Liquid Glass modifier for Moment.
+ * Pure translucent depth with smooth refraction gradient and ultra-fine luminous border.
+ * Zero distortion artifacts, zero unclipped smudges.
  */
 fun Modifier.liquidGlass(
     shape: Shape = RoundedCornerShape(24.dp),
     tintColor: Color = Color.White,
-    alpha: Float = 0.09f,
+    alpha: Float = 0.10f,
     borderAlpha: Float = 0.22f,
     isMine: Boolean = false
 ): Modifier = this
     .clip(shape)
-    .then(
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Modifier.graphicsLayer {
-                val shader = AgslLiquidGlass.refractionShader
-                if (shader != null && size.width > 0f && size.height > 0f) {
-                    val radii = extractCornerRadii(shape, size, density)
-                    shader.setFloatUniform("size", size.width, size.height)
-                    shader.setFloatUniform("offset", 0f, 0f)
-                    shader.setFloatUniform("cornerRadii", radii[0], radii[1], radii[2], radii[3])
-                    shader.setFloatUniform("refractionHeight", 20f * density)
-                    shader.setFloatUniform("refractionAmount", 14f * density)
-                    shader.setFloatUniform("depthEffect", 0.30f)
-                    shader.setFloatUniform("chromaticAberration", 0.45f)
-                    val effect = RenderEffect.createRuntimeShaderEffect(shader, "content")
-                    renderEffect = effect.asComposeRenderEffect()
-                }
-            }
-        } else {
-            Modifier
-        }
-    )
     .background(
         brush = if (isMine) {
             Brush.linearGradient(
                 colors = listOf(
-                    Color(0xFF3B82F6).copy(alpha = 0.68f),
-                    Color(0xFF1D4ED8).copy(alpha = 0.78f)
+                    Color(0xFF2563EB).copy(alpha = 0.85f),
+                    Color(0xFF1D4ED8).copy(alpha = 0.90f)
                 ),
                 start = Offset.Zero,
                 end = Offset.Infinite
@@ -324,46 +94,26 @@ fun Modifier.liquidGlass(
         } else {
             Brush.verticalGradient(
                 colors = listOf(
-                    tintColor.copy(alpha = (alpha * 1.25f).coerceIn(0.06f, 0.35f)),
-                    tintColor.copy(alpha = (alpha * 0.70f).coerceIn(0.03f, 0.20f))
+                    tintColor.copy(alpha = (alpha * 1.35f).coerceIn(0.06f, 0.35f)),
+                    tintColor.copy(alpha = (alpha * 0.70f).coerceIn(0.02f, 0.18f))
                 )
             )
         },
         shape = shape
     )
-    .drawWithContent {
-        drawContent()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && size.width > 0f && size.height > 0f) {
-            val hlShader = AgslLiquidGlass.highlightShader
-            if (hlShader != null) {
-                val radii = extractCornerRadii(shape, size, density)
-                hlShader.setFloatUniform("size", size.width, size.height)
-                hlShader.setFloatUniform("cornerRadii", radii[0], radii[1], radii[2], radii[3])
-                hlShader.setFloatUniform("angle", (-45.0 * Math.PI / 180.0).toFloat())
-                hlShader.setFloatUniform("falloff", 1.8f)
-                val paint = Paint().apply {
-                    this.shader = hlShader
-                    this.alpha = if (isMine) (0.35f * 255).toInt() else (borderAlpha * 0.75f * 255).toInt()
-                }
-                drawIntoCanvas { canvas ->
-                    canvas.nativeCanvas.drawRect(0f, 0f, size.width, size.height, paint)
-                }
-            }
-        }
-    }
     .border(
         border = BorderStroke(
             width = 0.85.dp,
             brush = Brush.linearGradient(
                 colors = if (isMine) {
                     listOf(
-                        Color.White.copy(alpha = 0.55f),
-                        Color(0xFF93C5FD).copy(alpha = 0.20f)
+                        Color.White.copy(alpha = 0.50f),
+                        Color(0xFF93C5FD).copy(alpha = 0.15f)
                     )
                 } else {
                     listOf(
                         Color.White.copy(alpha = borderAlpha),
-                        Color.White.copy(alpha = borderAlpha * 0.25f)
+                        Color.White.copy(alpha = borderAlpha * 0.20f)
                     )
                 },
                 start = Offset.Zero,

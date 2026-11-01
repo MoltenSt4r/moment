@@ -272,14 +272,14 @@ fun MomentChatScreen(
         }
 
         Scaffold(
-            containerColor = if (customWallpaperBitmap != null) Color.Transparent else colorScheme.surface,
+            containerColor = if (customWallpaperBitmap != null || isLiquidGlass) Color.Transparent else colorScheme.surface,
             contentWindowInsets = WindowInsets.safeDrawing,
             topBar = {
                 val topBarModifier = if (isLiquidGlass) {
                     Modifier.liquidGlass(
                         shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
                         alpha = 0.12f,
-                        borderAlpha = 0.25f
+                        borderAlpha = 0.22f
                     )
                 } else {
                     Modifier
@@ -294,14 +294,14 @@ fun MomentChatScreen(
                                 fontWeight = FontWeight.Black,
                                 fontSize = 24.sp,
                                 letterSpacing = (-0.8).sp,
-                                color = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurface
+                                color = if (customWallpaperBitmap != null || isLiquidGlass) Color.White else colorScheme.onSurface
                             )
                             if (uiState.isPeerTyping && !uiState.isPeerDisconnected) {
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = stringResource(R.string.peer_typing),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (customWallpaperBitmap != null) Color(0xFF93C5FD) else colorScheme.primary
+                                    color = if (customWallpaperBitmap != null || isLiquidGlass) Color(0xFF93C5FD) else colorScheme.primary
                                 )
                             }
                         }
@@ -315,17 +315,22 @@ fun MomentChatScreen(
                             label = {
                                 Text(
                                     text = if (uiState.defaultTtlSeconds > 0) "${uiState.defaultTtlSeconds}с" else "Выкл",
-                                    color = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurface
+                                    color = if (customWallpaperBitmap != null || isLiquidGlass) Color.White else colorScheme.onSurface
                                 )
                             },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Outlined.Timer,
                                     contentDescription = null,
-                                    tint = if (customWallpaperBitmap != null) Color(0xFF93C5FD) else colorScheme.primary,
+                                    tint = if (customWallpaperBitmap != null || isLiquidGlass) Color(0xFF93C5FD) else colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                             },
+                            shape = CircleShape,
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (isLiquidGlass) Color.White.copy(alpha = 0.10f) else Color.Transparent
+                            ),
+                            border = if (isLiquidGlass) BorderStroke(0.85.dp, Color.White.copy(alpha = 0.20f)) else AssistChipDefaults.assistChipBorder(enabled = true),
                             modifier = Modifier
                                 .padding(end = 12.dp)
                                 .testTag("chat_ttl_toggle_pill")
@@ -1227,11 +1232,9 @@ private fun MomentMessageComposer(
                 Modifier
                     .weight(1f)
                     .height(48.dp)
-                    .liquidGlass(
-                        shape = RoundedCornerShape(28.dp),
-                        alpha = 0.14f,
-                        borderAlpha = 0.26f
-                    )
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(BorderStroke(0.85.dp, Color.White.copy(alpha = 0.16f)), RoundedCornerShape(28.dp))
             } else {
                 Modifier
                     .weight(1f)
