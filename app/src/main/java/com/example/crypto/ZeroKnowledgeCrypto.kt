@@ -250,7 +250,8 @@ enum class PayloadKind {
     REACTION,
     TYPING,
     HANDSHAKE_SYN,
-    HANDSHAKE_ACK
+    HANDSHAKE_ACK,
+    PEER_LEFT
 }
 
 data class PlainEnvelopePayload(

@@ -95,6 +95,11 @@ fun MomentHomeScreen(
     autoShredOnBackground: Boolean = false,
     onToggleAutoShredOnBackground: (Boolean) -> Unit = {},
     customWallpaperSeed: Color? = null,
+    customWallpaperBitmap: androidx.compose.ui.graphics.ImageBitmap? = null,
+    hasCustomWallpaper: Boolean = false,
+    onClearWallpaper: () -> Unit = {},
+    isLiquidGlassEnabled: Boolean = true,
+    onToggleLiquidGlass: (Boolean) -> Unit = {},
     onSelectSystemMonet: () -> Unit = {},
     onSelectCustomSeed: (Color) -> Unit = {},
     onPickWallpaperUri: (Uri) -> Unit = {},
@@ -116,43 +121,58 @@ fun MomentHomeScreen(
         }
     }
 
-    Scaffold(
-        containerColor = colorScheme.surface,
-        contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = {
-            TopAppBar(
-                title = {},
-                actions = {
-                    IconButton(
-                        onClick = {
-                            hapticEngine.onReactionToggled()
-                            showMonetSheet = true
-                        },
-                        modifier = Modifier.testTag("monet_palette_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Palette,
-                            contentDescription = "Цвета Monet и приватность",
-                            tint = colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(
-                        onClick = onResetIdentity,
-                        modifier = Modifier.testTag("reset_identity_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Refresh,
-                            contentDescription = "Сбросить ключи",
-                            tint = colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colorScheme.surface
-                )
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (customWallpaperBitmap != null) {
+            androidx.compose.foundation.Image(
+                bitmap = customWallpaperBitmap,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = if (isLiquidGlassEnabled) 0.38f else 0.50f))
             )
         }
-    ) { innerPadding ->
+
+        Scaffold(
+            containerColor = if (customWallpaperBitmap != null) Color.Transparent else colorScheme.surface,
+            contentWindowInsets = WindowInsets.safeDrawing,
+            topBar = {
+                TopAppBar(
+                    title = {},
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                hapticEngine.onReactionToggled()
+                                showMonetSheet = true
+                            },
+                            modifier = Modifier.testTag("monet_palette_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Palette,
+                                contentDescription = "Цвета Monet и приватность",
+                                tint = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = onResetIdentity,
+                            modifier = Modifier.testTag("reset_identity_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Refresh,
+                                contentDescription = "Сбросить ключи",
+                                tint = if (customWallpaperBitmap != null) Color.White else colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
+                )
+            }
+        ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -454,7 +474,57 @@ fun MomentHomeScreen(
                     }
                 }
 
-                // 3. Auto-shred on Background Switch
+                // 3. Liquid Glass Mode Switch
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Режим Liquid Glass",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Outlined.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color(0xFF60A5FA),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text = "Эффект жидкого стекла с прозрачностью и глянцевым преломлением",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = isLiquidGlassEnabled,
+                        onCheckedChange = onToggleLiquidGlass
+                    )
+                }
+
+                if (hasCustomWallpaper) {
+                    FilledTonalButton(
+                        onClick = {
+                            hapticEngine.onSessionShredded()
+                            onClearWallpaper()
+                        },
+                        colors = androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(
+                            containerColor = colorScheme.errorContainer.copy(alpha = 0.7f),
+                            contentColor = colorScheme.onErrorContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Удалить свои обои (сбросить на системные)")
+                    }
+                }
+
+                // 4. Auto-shred on Background Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -479,7 +549,7 @@ fun MomentHomeScreen(
                     )
                 }
 
-                // 4. Hardware FLAG_SECURE Switch
+                // 5. Hardware FLAG_SECURE Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -505,5 +575,6 @@ fun MomentHomeScreen(
                 }
             }
         }
+    }
     }
 }

@@ -55,36 +55,37 @@ async def send_safe(ws, msg_dict: dict):
     except Exception as e:
         logger.debug(f"Failed to send: {e}")
 
-async def handle_leave(ws, explicit: bool = False):
+async def handle_leave(ws, explicit: bool = False, room_id_hint: str = None):
     global waiting_queue
     waiting_queue = [item for item in waiting_queue if item["ws"] != ws]
 
-    room_id = ws_to_room.pop(ws, None)
-    if room_id and room_id in active_rooms:
-        room = active_rooms.get(room_id)
-        if room:
-            if explicit:
-                active_rooms.pop(room_id, None)
-                host_ws = room["host_ws"]
-                guest_ws = room["guest_ws"]
-                peer_ws = guest_ws if ws == host_ws else host_ws
-                ws_to_room.pop(peer_ws, None)
-                await send_safe(peer_ws, {"type": "peer_left", "roomId": room_id})
-                logger.info(f"Room {room_id} explicitly shredded")
-            else:
-                asyncio.create_task(delayed_room_cleanup(room_id, ws))
+    # Resolve room ID from ws_to_room, hint, or linear search
+    room_id = ws_to_room.pop(ws, None) or room_id_hint
+    if not room_id:
+        for rid, room in list(active_rooms.items()):
+            if room.get("host_ws") == ws or room.get("guest_ws") == ws:
+                room_id = rid
+                break
 
-async def delayed_room_cleanup(room_id: str, disconnected_ws):
-    await asyncio.sleep(12.0)
-    if room_id in active_rooms:
-        room = active_rooms.get(room_id)
-        if room and (room["host_ws"] == disconnected_ws or room["guest_ws"] == disconnected_ws):
-            logger.info(f"Room {room_id} closed after disconnect timeout")
-            active_rooms.pop(room_id, None)
-            ws_to_room.pop(room["host_ws"], None)
-            ws_to_room.pop(room["guest_ws"], None)
-            peer_ws = room["guest_ws"] if disconnected_ws == room["host_ws"] else room["host_ws"]
-            await send_safe(peer_ws, {"type": "peer_left", "roomId": room_id})
+    if room_id and room_id in active_rooms:
+        room = active_rooms.pop(room_id, None)
+        if room:
+            host_ws = room.get("host_ws")
+            guest_ws = room.get("guest_ws")
+            peer_ws = guest_ws if ws == host_ws else host_ws
+
+            if peer_ws:
+                ws_to_room.pop(peer_ws, None)
+            ws_to_room.pop(ws, None)
+
+            reason = "left" if explicit else "disconnected"
+            if peer_ws and peer_ws.state == State.OPEN:
+                await send_safe(peer_ws, {
+                    "type": "peer_left",
+                    "roomId": room_id,
+                    "reason": reason
+                })
+            logger.info(f"Room {room_id} immediately closed and notified peer (reason={reason})")
 
 async def handle_join_queue(ws, data: dict):
     await handle_leave(ws, explicit=True)
@@ -246,7 +247,8 @@ async def handler(websocket):
             elif action == "typing":
                 await handle_typing(websocket, data)
             elif action == "leave_room":
-                await handle_leave(websocket, explicit=True)
+                room_hint = data.get("roomId")
+                await handle_leave(websocket, explicit=True, room_id_hint=room_hint)
             elif action == "ping":
                 await send_safe(websocket, {"type": "pong"})
     except websockets.exceptions.ConnectionClosed:

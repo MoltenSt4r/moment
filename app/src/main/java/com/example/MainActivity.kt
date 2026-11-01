@@ -3,6 +3,7 @@ package com.example
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -31,6 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -51,7 +54,11 @@ import com.example.ui.theme.extractWallpaperSeedColor
 import com.example.util.HapticEngine
 import com.example.viewmodel.MomentViewModel
 import com.example.viewmodel.SessionPhase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
@@ -64,6 +71,14 @@ class MainActivity : ComponentActivity() {
             var hardwareFlagSecureEnabled by remember { mutableStateOf(false) }
             var autoShredOnBackground by remember { mutableStateOf(false) }
             var customWallpaperSeed by remember { mutableStateOf<Color?>(null) }
+            var customWallpaperBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+            // Load saved wallpaper on cold start
+            LaunchedEffect(Unit) {
+                customWallpaperBitmap = withContext(Dispatchers.IO) {
+                    loadWallpaperBitmap(context)
+                }
+            }
 
             LaunchedEffect(hardwareFlagSecureEnabled) {
                 if (hardwareFlagSecureEnabled) {
@@ -86,19 +101,64 @@ class MainActivity : ComponentActivity() {
                     autoShredOnBackground = autoShredOnBackground,
                     onToggleAutoShredOnBackground = { autoShredOnBackground = it },
                     customWallpaperSeed = customWallpaperSeed,
-                    onSelectSystemMonet = { customWallpaperSeed = null },
+                    customWallpaperBitmap = customWallpaperBitmap,
+                    onSelectSystemMonet = {
+                        customWallpaperSeed = null
+                    },
                     onSelectCustomSeed = { customWallpaperSeed = it },
                     onPickWallpaperUri = { uri: Uri ->
                         scope.launch {
+                            val bmp = saveWallpaperBitmap(context, uri)
+                            if (bmp != null) {
+                                customWallpaperBitmap = bmp
+                            }
                             val extracted = extractWallpaperSeedColor(context, uri)
                             if (extracted != null) {
                                 customWallpaperSeed = extracted
                             }
                         }
+                    },
+                    onClearWallpaper = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                val file = File(context.filesDir, "custom_chat_wallpaper.jpg")
+                                if (file.exists()) file.delete()
+                            }
+                            customWallpaperBitmap = null
+                            customWallpaperSeed = null
+                        }
                     }
                 )
             }
         }
+    }
+}
+
+private fun loadWallpaperBitmap(context: Context): ImageBitmap? {
+    return try {
+        val file = File(context.filesDir, "custom_chat_wallpaper.jpg")
+        if (!file.exists()) return null
+        val options = BitmapFactory.Options().apply { inSampleSize = 2 }
+        val bmp = BitmapFactory.decodeFile(file.absolutePath, options)
+        bmp?.asImageBitmap()
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private suspend fun saveWallpaperBitmap(context: Context, uri: Uri): ImageBitmap? = withContext(Dispatchers.IO) {
+    try {
+        val targetFile = File(context.filesDir, "custom_chat_wallpaper.jpg")
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(targetFile).use { output ->
+                input.copyTo(output)
+            }
+        }
+        val options = BitmapFactory.Options().apply { inSampleSize = 2 }
+        val bmp = BitmapFactory.decodeFile(targetFile.absolutePath, options)
+        bmp?.asImageBitmap()
+    } catch (_: Exception) {
+        null
     }
 }
 
@@ -120,9 +180,11 @@ fun MomentZeroKnowledgeApp(
     autoShredOnBackground: Boolean = false,
     onToggleAutoShredOnBackground: (Boolean) -> Unit = {},
     customWallpaperSeed: Color? = null,
+    customWallpaperBitmap: ImageBitmap? = null,
     onSelectSystemMonet: () -> Unit = {},
     onSelectCustomSeed: (Color) -> Unit = {},
-    onPickWallpaperUri: (Uri) -> Unit = {}
+    onPickWallpaperUri: (Uri) -> Unit = {},
+    onClearWallpaper: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -177,8 +239,8 @@ fun MomentZeroKnowledgeApp(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Only enter MomentChatScreen when a REAL peer has connected and verified ECDH keys
-        val showActiveChat = uiState.phase == SessionPhase.ACTIVE_CHAT && uiState.isPeerConnected
+        // Only enter MomentChatScreen when in ACTIVE_CHAT phase
+        val showActiveChat = uiState.phase == SessionPhase.ACTIVE_CHAT
 
         AnimatedContent(
             targetState = showActiveChat,
@@ -191,6 +253,7 @@ fun MomentZeroKnowledgeApp(
                 MomentChatScreen(
                     uiState = uiState,
                     hapticEngine = hapticEngine,
+                    customWallpaperBitmap = customWallpaperBitmap,
                     onSendMessage = { text -> viewModel.sendMessage(text) },
                     onUserTypingChanged = { text -> viewModel.onUserTypingChanged(text) },
                     onSetReply = { msg -> viewModel.setReplyDraft(msg) },
@@ -203,6 +266,9 @@ fun MomentZeroKnowledgeApp(
                             else -> 0
                         }
                         viewModel.setDefaultTtlSeconds(next)
+                    },
+                    onToggleLiquidGlass = {
+                        viewModel.setLiquidGlassEnabled(!uiState.isLiquidGlassEnabled)
                     },
                     onSwitchToNewPartner = {
                         scrubSystemClipboard(context)
@@ -222,6 +288,11 @@ fun MomentZeroKnowledgeApp(
                     autoShredOnBackground = autoShredOnBackground,
                     onToggleAutoShredOnBackground = onToggleAutoShredOnBackground,
                     customWallpaperSeed = customWallpaperSeed,
+                    customWallpaperBitmap = customWallpaperBitmap,
+                    hasCustomWallpaper = customWallpaperBitmap != null,
+                    onClearWallpaper = onClearWallpaper,
+                    isLiquidGlassEnabled = uiState.isLiquidGlassEnabled,
+                    onToggleLiquidGlass = { viewModel.setLiquidGlassEnabled(it) },
                     onSelectSystemMonet = onSelectSystemMonet,
                     onSelectCustomSeed = onSelectCustomSeed,
                     onPickWallpaperUri = onPickWallpaperUri,

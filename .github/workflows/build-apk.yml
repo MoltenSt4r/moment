@@ -84,3 +84,23 @@ jobs:
           name: app-debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
+
+      - name: Create GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.1.${{ github.run_number }}
+          name: "Moment v1.1.${{ github.run_number }} — Liquid Glass Edition"
+          body: |
+            ## ✨ Moment v1.1 Release
+            - **Liquid Glass Mode**: Translucent glassmorphism with refraction sheen and specular highlights.
+            - **Enhanced Gestures**: Pull-to-exit now seamlessly cancelable by swiping back up.
+            - **Custom Chat Wallpaper**: Persistent user background with automatic contrast grading.
+            - **Full Emoji Reactions**: All emoji categories supported with celebratory particle bursts.
+            - **Instant Peer Status**: Real-time peer disconnection detection and zero-knowledge room shredding.
+          draft: false
+          prerelease: false
+          files: |
+            app/build/outputs/apk/debug/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

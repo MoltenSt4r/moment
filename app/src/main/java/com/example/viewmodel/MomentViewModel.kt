@@ -46,6 +46,9 @@ data class MomentUiState(
     val phase: SessionPhase = SessionPhase.IDLE,
     val currentRoomId: String? = null,
     val isPeerConnected: Boolean = false,
+    val isPeerDisconnected: Boolean = false,
+    val peerDisconnectedNotice: String? = null,
+    val isLiquidGlassEnabled: Boolean = true,
     val handshakeVerification: HandshakeVerification? = null,
     val messages: List<MomentMessage> = emptyList(),
     val replyDraft: ReplyDraft? = null,
@@ -93,6 +96,10 @@ class MomentViewModel(
         _uiState.update { it.copy(defaultTtlSeconds = seconds) }
     }
 
+    fun setLiquidGlassEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(isLiquidGlassEnabled = enabled) }
+    }
+
     fun setReplyDraft(message: MomentMessage?) {
         _uiState.update {
             it.copy(
@@ -126,6 +133,8 @@ class MomentViewModel(
                 phase = SessionPhase.SEARCHING,
                 currentRoomId = null,
                 isPeerConnected = false,
+                isPeerDisconnected = false,
+                peerDisconnectedNotice = null,
                 messages = emptyList(),
                 replyDraft = null,
                 handshakeVerification = null,
@@ -386,21 +395,37 @@ class MomentViewModel(
             repository.observeLiveRoom(roomId)
                 .catch { e -> Log.w(TAG, "Active room observer error", e) }
                 .collect { roomSnap ->
-                    if (roomSnap == null || roomSnap.status == "shredded") {
+                    if (roomSnap == null || roomSnap.status == "shredded" || roomSnap.status == "peer_left") {
                         if (_uiState.value.phase == SessionPhase.ACTIVE_CHAT) {
-                            shredActiveSessionInternal(deleteRemote = false)
-                            _uiState.update {
-                                it.copy(
-                                    phase = SessionPhase.IDLE,
-                                    currentRoomId = null,
-                                    isPeerConnected = false,
-                                    messages = emptyList(),
-                                    statusBannerText = "Собеседник покинул чат • Ключи уничтожены"
-                                )
-                            }
+                            onPeerDeparted("Собеседник покинул чат • Ключи уничтожены")
                         }
                     }
                 }
+        }
+    }
+
+    private fun onPeerDeparted(reasonText: String) {
+        localCrypto.shred()
+        _uiState.update { st ->
+            if (st.isPeerDisconnected) st
+            else {
+                val noticeMsg = MomentMessage(
+                    id = "notice_${UUID.randomUUID()}",
+                    senderUid = "system",
+                    isMine = false,
+                    text = "🔒 Собеседник отключился от чата. Временные ключи уничтожены.",
+                    ttlSeconds = 0,
+                    createdAtMs = System.currentTimeMillis()
+                )
+                st.copy(
+                    isPeerConnected = false,
+                    isPeerDisconnected = true,
+                    peerDisconnectedNotice = reasonText,
+                    statusBannerText = reasonText,
+                    isPeerTyping = false,
+                    messages = (st.messages + noticeMsg).sortedBy { it.createdAtMs }
+                )
+            }
         }
     }
 
@@ -415,6 +440,8 @@ class MomentViewModel(
                 phase = SessionPhase.ACTIVE_CHAT,
                 currentRoomId = roomId,
                 isPeerConnected = true,
+                isPeerDisconnected = false,
+                peerDisconnectedNotice = null,
                 handshakeVerification = verification,
                 statusBannerText = null
             )
@@ -621,6 +648,13 @@ class MomentViewModel(
                     }
                 }
 
+                PayloadKind.PEER_LEFT -> {
+                    onPeerDeparted("Собеседник покинул чат • Ключи уничтожены")
+                    if (!roomId.isNullOrBlank()) {
+                        viewModelScope.launch { repository.deleteLiveEnvelope(roomId, env.id) }
+                    }
+                }
+
                 PayloadKind.MESSAGE -> {
                     val ttlSec = env.ttlSeconds.toInt()
                     val createdMs = env.createdAt?.toDate()?.time ?: decrypted.sentAtMs.takeIf { it > 0 } ?: now
@@ -684,6 +718,13 @@ class MomentViewModel(
     }
 
     fun exitToMainMenu() {
+        val roomToShred = _uiState.value.currentRoomId
+        val wasConnected = _uiState.value.isPeerConnected && !_uiState.value.isPeerDisconnected
+        if (wasConnected && !roomToShred.isNullOrBlank()) {
+            viewModelScope.launch {
+                runCatching { sendControlEnvelope(roomToShred, PayloadKind.PEER_LEFT) }
+            }
+        }
         shredActiveSessionInternal(deleteRemote = true)
         activeSessionNodeToken = localCrypto.generateUnlinkableNodeToken()
         _uiState.update {
@@ -691,6 +732,8 @@ class MomentViewModel(
                 phase = SessionPhase.IDLE,
                 currentRoomId = null,
                 isPeerConnected = false,
+                isPeerDisconnected = false,
+                peerDisconnectedNotice = null,
                 messages = emptyList(),
                 replyDraft = null,
                 handshakeVerification = null,

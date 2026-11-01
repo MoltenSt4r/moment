@@ -152,11 +152,12 @@ class BlindRelayRepository(context: Context? = null) {
                     envelopeFlow.tryEmit(env)
                 }
 
-                "peer_left" -> {
+                "peer_left", "peer_disconnected" -> {
                     val roomId = json.optString("roomId", currentRoomId ?: "")
+                    Log.i(TAG, "Peer departed room $roomId")
                     roomStateFlow.value = BlindRoomDoc(
                         id = roomId,
-                        status = "shredded",
+                        status = "peer_left",
                         createdAt = RelayTimestamp(),
                         updatedAt = RelayTimestamp()
                     )
@@ -197,6 +198,31 @@ class BlindRelayRepository(context: Context? = null) {
         // WebSocket server handles matchmaking centrally in-memory
         return Result.success(emptyList())
     }
+
+    suspend fun createWaitingRoom(
+        hostPubKey: String,
+        ephemeralSalt: String,
+        customRoomId: String = "room_${UUID.randomUUID().toString().replace("-", "")}"
+    ): Result<BlindRoomDoc> = createLiveWaitingRoom("host_node", hostPubKey, ephemeralSalt, customRoomId)
+
+    suspend fun joinWaitingRoom(
+        roomId: String,
+        guestUid: String,
+        guestPubKey: String
+    ): Result<Unit> = joinLiveWaitingRoom(roomId, guestUid, guestPubKey)
+
+    suspend fun sendEncryptedEnvelope(
+        roomId: String,
+        senderUid: String,
+        participantUids: List<String>,
+        ratchetStep: Int,
+        ivBase64: String,
+        ciphertextBase64: String,
+        ttlSeconds: Int,
+        envelopeId: String = "env_${UUID.randomUUID().toString().replace("-", "")}"
+    ): Result<String> = sendLiveEncryptedEnvelope(
+        roomId, senderUid, participantUids, ratchetStep, ivBase64, ciphertextBase64, ttlSeconds, envelopeId
+    )
 
     suspend fun createLiveWaitingRoom(
         ephemeralNodeId: String,
