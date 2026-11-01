@@ -1,17 +1,8 @@
 package com.example.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,12 +32,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.ExitToApp
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -69,34 +55,29 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * High-performance Liquid Glass design modifier for Moment.
- * Implements physical glass refraction styling:
- * - Translucent gradient body
- * - Specular border shine (highlighting top-left incidence angle)
- * - Upper specular glossy horizon
+ * Modern Liquid Glass modifier for Material Design 3 Expressive.
+ * Pure translucent depth with smooth refraction and ultra-fine luminous gradient rim.
+ * Zero skeuomorphic white gloss stripes.
  */
 fun Modifier.liquidGlass(
-    shape: Shape = RoundedCornerShape(20.dp),
+    shape: Shape = RoundedCornerShape(24.dp),
     tintColor: Color = Color.White,
-    alpha: Float = 0.14f,
-    borderAlpha: Float = 0.35f,
+    alpha: Float = 0.09f,
+    borderAlpha: Float = 0.22f,
     isMine: Boolean = false
 ): Modifier = this
     .clip(shape)
@@ -104,69 +85,41 @@ fun Modifier.liquidGlass(
         brush = if (isMine) {
             Brush.linearGradient(
                 colors = listOf(
-                    Color(0xFF2563EB).copy(alpha = 0.78f),
-                    Color(0xFF4F46E5).copy(alpha = 0.68f),
-                    Color(0xFF1D4ED8).copy(alpha = 0.82f)
+                    Color(0xFF3B82F6).copy(alpha = 0.68f),
+                    Color(0xFF1D4ED8).copy(alpha = 0.78f)
                 ),
-                start = Offset(0f, 0f),
-                end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+                start = Offset.Zero,
+                end = Offset.Infinite
             )
         } else {
             Brush.verticalGradient(
                 colors = listOf(
-                    tintColor.copy(alpha = (alpha * 1.35f).coerceIn(0.12f, 0.45f)),
-                    tintColor.copy(alpha = (alpha * 0.70f).coerceIn(0.06f, 0.28f))
+                    tintColor.copy(alpha = (alpha * 1.25f).coerceIn(0.06f, 0.35f)),
+                    tintColor.copy(alpha = (alpha * 0.70f).coerceIn(0.03f, 0.20f))
                 )
             )
         },
         shape = shape
     )
-    .drawBehind {
-        drawLiquidGlassSheen(this, isMine)
-    }
     .border(
         border = BorderStroke(
-            width = 1.dp,
-            brush = Brush.linearGradient(
+            width = 0.85.dp,
+            brush = Brush.verticalGradient(
                 colors = if (isMine) {
                     listOf(
-                        Color.White.copy(alpha = 0.70f),
-                        Color.White.copy(alpha = 0.20f),
-                        Color(0xFF93C5FD).copy(alpha = 0.40f)
+                        Color.White.copy(alpha = 0.55f),
+                        Color(0xFF93C5FD).copy(alpha = 0.20f)
                     )
                 } else {
                     listOf(
                         Color.White.copy(alpha = borderAlpha),
-                        Color.White.copy(alpha = borderAlpha * 0.2f),
-                        Color.White.copy(alpha = borderAlpha * 0.5f)
+                        Color.White.copy(alpha = borderAlpha * 0.25f)
                     )
-                },
-                start = Offset.Zero,
-                end = Offset.Infinite
+                }
             )
         ),
         shape = shape
     )
-
-private fun drawLiquidGlassSheen(scope: DrawScope, isMine: Boolean) {
-    val w = scope.size.width
-    val h = scope.size.height
-    if (w <= 0f || h <= 0f) return
-
-    val sheenHeight = (h * 0.42f).coerceAtMost(scope.density * 28f)
-    scope.drawRect(
-        brush = Brush.verticalGradient(
-            colors = listOf(
-                Color.White.copy(alpha = if (isMine) 0.28f else 0.16f),
-                Color.White.copy(alpha = 0.0f)
-            ),
-            startY = 0f,
-            endY = sheenHeight
-        ),
-        topLeft = Offset.Zero,
-        size = Size(w, sheenHeight)
-    )
-}
 
 /**
  * Animated Particle for Reaction Explosion
@@ -219,7 +172,6 @@ fun ReactionBurstOverlay(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val alpha = (1f - p * p).coerceIn(0f, 1f)
             for (pt in particles) {
                 val travel = p * pt.distanceMaxDp * pt.speed
                 val offsetX = cos(pt.angleRad) * travel
@@ -247,8 +199,8 @@ val ALL_REACTION_CATEGORIES = listOf(
     "Популярные" to listOf("👍", "❤️", "😂", "🔥", "😮", "🙏", "⚡", "💀", "💯", "🎉", "🥺", "👀", "👏", "🚀", "💔", "😍", "🤝", "🤩", "😭", "🤔", "😎", "🥳", "🤐", "🤫", "🥱", "🤤", "😴", "🫡", "🫠", "✨"),
     "Смайлы" to listOf("😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖"),
     "Жесты" to listOf("👋", "🤚", "🖐️", "✋", "🖖", "🫱", "🫲", "🫳", "🫴", "👌", "🤌", "🤏", "✌️", "🤞", "🫰", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "🫵", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "🫶", "👐", "🤲", "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "🧠", "🦷", "🦴", "👀", "👁️", "👅", "👄", "🫦"),
-    "Сердца & Огонь" to listOf("❤️", "🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "🫀", "🔥", "💥", "💫", "⭐", "🌟", "✨", "⚡", "💢", "💋", "💌"),
-    "Предметы & Магия" to listOf("💯", "💬", "💭", "🗯️", "💤", "💣", "💥", "🪄", "🔮", "🧿", "🎯", "🎲", "🎮", "🕹️", "🏆", "🥇", "🥈", "🥉", "👑", "💎", "🔔", "💡", "🕯️", "📱", "💻", "✉️", "📦", "🎁", "🎈", "🎉", "🎊", "🪅", "🪩", "🪐", "🌍", "🌙", "☀️", "☕", "🍺", "🥂", "🍕", "🍔")
+    "Сердца" to listOf("❤️", "🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "🫀", "🔥", "💥", "💫", "⭐", "🌟", "✨", "⚡", "💢", "💋", "💌"),
+    "Предметы" to listOf("💯", "💬", "💭", "🗯️", "💤", "💣", "💥", "🪄", "🔮", "🧿", "🎯", "🎲", "🎮", "🕹️", "🏆", "🥇", "🥈", "🥉", "👑", "💎", "🔔", "💡", "🕯️", "📱", "💻", "✉️", "📦", "🎁", "🎈", "🎉", "🎊", "🪅", "🪩", "🪐", "🌍", "🌙", "☀️", "☕", "🍺", "🥂", "🍕", "🍔")
 )
 
 /**
@@ -294,7 +246,7 @@ fun MomentFullEmojiPickerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Выберите реакцию",
+                    text = "Реакция",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = colorScheme.onSurface
@@ -310,7 +262,6 @@ fun MomentFullEmojiPickerSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Search bar
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = colorScheme.surfaceContainerHighest,
@@ -366,7 +317,6 @@ fun MomentFullEmojiPickerSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Category Chips
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -391,7 +341,6 @@ fun MomentFullEmojiPickerSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Emoji Grid
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 44.dp),
                 contentPadding = PaddingValues(vertical = 4.dp),
@@ -418,98 +367,6 @@ fun MomentFullEmojiPickerSheet(
                             fontSize = 24.sp
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Notice banner displayed when peer disconnects / leaves
- */
-@Composable
-fun PeerDisconnectedBanner(
-    noticeText: String,
-    onNextPartner: () -> Unit,
-    onExitMenu: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colorScheme = MaterialTheme.colorScheme
-
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = Color(0xFF1E293B).copy(alpha = 0.92f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .testTag("peer_disconnected_card")
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(text = "🔒", fontSize = 20.sp)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = noticeText,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = "Все временные ключи шифрования в RAM уничтожены",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.72f),
-                fontSize = 13.sp
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                ElevatedButton(
-                    onClick = onNextPartner,
-                    colors = ButtonDefaults.elevatedButtonColors(
-                        containerColor = colorScheme.primary,
-                        contentColor = colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Новый чат")
-                }
-
-                FilledTonalButton(
-                    onClick = onExitMenu,
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.15f),
-                        contentColor = Color.White
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.ExitToApp,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "В меню")
                 }
             }
         }

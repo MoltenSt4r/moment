@@ -92,12 +92,12 @@ jobs:
           tag_name: v1.1.${{ github.run_number }}
           name: "Moment v1.1.${{ github.run_number }} — Liquid Glass Edition"
           body: |
-            ## ✨ Moment v1.1 Release
-            - **Liquid Glass Mode**: Translucent glassmorphism with refraction sheen and specular highlights.
+            ## Moment v1.1 Release
+            - **Material 3 Liquid Glass Mode**: Modern fluid glass aesthetic with translucent depth across Home and Chat.
             - **Enhanced Gestures**: Pull-to-exit now seamlessly cancelable by swiping back up.
-            - **Custom Chat Wallpaper**: Persistent user background with automatic contrast grading.
-            - **Full Emoji Reactions**: All emoji categories supported with celebratory particle bursts.
-            - **Instant Peer Status**: Real-time peer disconnection detection and zero-knowledge room shredding.
+            - **Custom Chat Wallpaper**: User background image support with automatic contrast grading.
+            - **Full Emoji Reactions**: Searchable catalog with all emoji categories and particle bursts.
+            - **Peer Disconnect Notification**: Unified MD3 bottom action bar with zero duplication and zero-knowledge cleanup.
           draft: false
           prerelease: false
           files: |

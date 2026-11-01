@@ -409,21 +409,12 @@ class MomentViewModel(
         _uiState.update { st ->
             if (st.isPeerDisconnected) st
             else {
-                val noticeMsg = MomentMessage(
-                    id = "notice_${UUID.randomUUID()}",
-                    senderUid = "system",
-                    isMine = false,
-                    text = "🔒 Собеседник отключился от чата. Временные ключи уничтожены.",
-                    ttlSeconds = 0,
-                    createdAtMs = System.currentTimeMillis()
-                )
                 st.copy(
                     isPeerConnected = false,
                     isPeerDisconnected = true,
                     peerDisconnectedNotice = reasonText,
                     statusBannerText = reasonText,
-                    isPeerTyping = false,
-                    messages = (st.messages + noticeMsg).sortedBy { it.createdAtMs }
+                    isPeerTyping = false
                 )
             }
         }
