@@ -141,8 +141,8 @@ fun Modifier.liquidGlass(
                         Color.White.copy(alpha = borderAlpha * 0.5f)
                     )
                 },
-                start = Offset(0f, 0f),
-                end = Offset(size.width, size.height)
+                start = Offset.Zero,
+                end = Offset.Infinite
             )
         ),
         shape = shape
@@ -153,7 +153,7 @@ private fun drawLiquidGlassSheen(scope: DrawScope, isMine: Boolean) {
     val h = scope.size.height
     if (w <= 0f || h <= 0f) return
 
-    val sheenHeight = (h * 0.42f).coerceAtMost(28.dp.toPx())
+    val sheenHeight = (h * 0.42f).coerceAtMost(scope.density * 28f)
     scope.drawRect(
         brush = Brush.verticalGradient(
             colors = listOf(
@@ -163,7 +163,7 @@ private fun drawLiquidGlassSheen(scope: DrawScope, isMine: Boolean) {
             startY = 0f,
             endY = sheenHeight
         ),
-        topLeft = Offset(0f, 0f),
+        topLeft = Offset.Zero,
         size = Size(w, sheenHeight)
     )
 }
@@ -230,7 +230,7 @@ fun ReactionBurstOverlay(
                     text = pt.emoji,
                     fontSize = 26.sp,
                     modifier = Modifier
-                        .offset { IntOffset(offsetX.roundToInt().dp.roundToPx(), offsetY.roundToInt().dp.roundToPx()) }
+                        .offset { IntOffset(offsetX.dp.roundToPx(), offsetY.dp.roundToPx()) }
                         .scale(currentScale)
                         .rotate(pt.rotationTarget * p)
                         .drawBehind { drawCircle(Color.Transparent) }

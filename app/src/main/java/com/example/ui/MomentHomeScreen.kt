@@ -488,12 +488,7 @@ fun MomentHomeScreen(
                                 color = colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Outlined.AutoAwesome,
-                                contentDescription = null,
-                                tint = Color(0xFF60A5FA),
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Text(text = "✨", fontSize = 16.sp)
                         }
                         Text(
                             text = "Эффект жидкого стекла с прозрачностью и глянцевым преломлением",

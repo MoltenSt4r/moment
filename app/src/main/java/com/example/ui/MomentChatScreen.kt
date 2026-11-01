@@ -58,7 +58,6 @@ import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.AssistChip
@@ -296,12 +295,7 @@ fun MomentChatScreen(
                             )
                             if (isLiquidGlass) {
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    imageVector = Icons.Outlined.AutoAwesome,
-                                    contentDescription = "Liquid Glass",
-                                    tint = Color(0xFF60A5FA),
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                Text(text = "✨", fontSize = 14.sp)
                             }
                             if (uiState.isPeerTyping && !uiState.isPeerDisconnected) {
                                 Spacer(modifier = Modifier.width(10.dp))
